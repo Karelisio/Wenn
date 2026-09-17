@@ -13,6 +13,10 @@ export interface CycleDataValue {
   cycleDays: CycleDay[];
   partnerNotes: PartnerNote[];
   loading: boolean;
+  /** Mode duo uniquement : true si la dernière copie chargée vient du cache local (pas de réseau). */
+  offline?: boolean;
+  /** Mode duo uniquement : nombre d'écritures en attente de synchronisation. */
+  pendingSyncCount?: number;
   upsertCycleDay: (
     date: string,
     fields: Partial<Pick<CycleDay, "flow" | "vaginal_pain" | "symptoms" | "mood" | "note">>

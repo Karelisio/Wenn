@@ -1,4 +1,4 @@
-import type { CycleDay, FlowIntensity } from "../types";
+import type { Couple, CycleDay, FlowIntensity, PartnerNote } from "../types";
 
 export interface BackupEntry {
   date: string;
@@ -64,13 +64,39 @@ export function parseBackupFile(file: File): Promise<BackupEntry[]> {
   });
 }
 
-const LOCAL_BACKUP_PREFIX = "wenn-duo-backup-";
+const DUO_CACHE_PREFIX = "wenn-duo-cache-";
 
-/** Mirroir silencieux des données duo sur l'appareil (filet de sécurité, pas une source de vérité). */
-export function mirrorDuoBackup(coupleId: string, cycleDays: CycleDay[]): void {
+interface DuoCache {
+  savedAt: string;
+  couple: Couple;
+  cycleDays: CycleDay[];
+  partnerNotes: PartnerNote[];
+}
+
+/**
+ * Copie locale silencieuse des données duo (couple + jours + notes), tenue à jour à
+ * chaque changement reçu de Supabase. Sert de repli en l'absence de réseau : l'app
+ * peut se lancer et être lue hors ligne, les écritures sont rejouées au retour de
+ * la connexion (voir offlineQueue.ts). Clé par utilisateur pour rester disponible
+ * même avant d'avoir pu recharger l'espace couple depuis le réseau.
+ */
+export function saveDuoCache(
+  userId: string,
+  data: { couple: Couple; cycleDays: CycleDay[]; partnerNotes: PartnerNote[] }
+): void {
   try {
-    localStorage.setItem(`${LOCAL_BACKUP_PREFIX}${coupleId}`, JSON.stringify({ savedAt: new Date().toISOString(), cycleDays }));
+    const payload: DuoCache = { savedAt: new Date().toISOString(), ...data };
+    localStorage.setItem(`${DUO_CACHE_PREFIX}${userId}`, JSON.stringify(payload));
   } catch {
-    // stockage indisponible : tant pis pour le mirroir, la source de vérité reste Supabase
+    // stockage indisponible : tant pis pour la copie locale, la source de vérité reste Supabase
+  }
+}
+
+export function loadDuoCache(userId: string): DuoCache | null {
+  try {
+    const raw = localStorage.getItem(`${DUO_CACHE_PREFIX}${userId}`);
+    return raw ? (JSON.parse(raw) as DuoCache) : null;
+  } catch {
+    return null;
   }
 }

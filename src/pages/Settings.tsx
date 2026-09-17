@@ -268,7 +268,8 @@ function UpdateCard() {
 function DuoSettings() {
   const { user, profile, signOut, refreshProfile } = useAuth();
   const { couple, role, otherPartyEmail, leaveCouple, renameCouple } = useCouple();
-  const { cycleDays, averageCycleLength, averagePeriodLength, canEdit, upsertCycleDay } = useCycleData();
+  const { cycleDays, averageCycleLength, averagePeriodLength, canEdit, upsertCycleDay, offline, pendingSyncCount } =
+    useCycleData();
   const { isDark } = useThemeMode();
   const [uploading, setUploading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -379,6 +380,27 @@ function DuoSettings() {
         <h1 style={{ margin: "0 0 2px" }}>Réglages</h1>
         <p style={{ margin: 0, color: "var(--md-sys-color-on-surface-variant)" }}>{user?.email}</p>
       </header>
+
+      {(offline || !!pendingSyncCount) && (
+        <div
+          className="card"
+          style={{
+            marginBottom: 16,
+            background: "var(--md-sys-color-surface-variant)",
+            color: "var(--md-sys-color-on-surface-variant)",
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          {offline
+            ? "📴 Hors ligne — tu vois la dernière copie enregistrée sur cet appareil."
+            : "🔄 Synchronisation en cours..."}
+          {!!pendingSyncCount &&
+            ` ${pendingSyncCount} modification${pendingSyncCount > 1 ? "s" : ""} en attente d'envoi, elle${
+              pendingSyncCount > 1 ? "s seront" : " sera"
+            } synchronisée${pendingSyncCount > 1 ? "s" : ""} dès que le réseau revient.`}
+        </div>
+      )}
 
       <AppearanceCard imageUrl={profile?.theme_image_url} onPickImage={handleImagePick} uploading={uploading} />
 

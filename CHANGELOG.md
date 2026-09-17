@@ -5,6 +5,11 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 
 ## Non publié
 
+- Mode Duo utilisable hors connexion : la dernière copie enregistrée
+  s'affiche automatiquement sans réseau (au lieu de rester bloqué sur
+  "Chargement..."), et les modifications faites hors ligne sont mises en
+  attente puis envoyées automatiquement dès le retour de la connexion.
+
 ## v1.0.13 — 2026-09-17
 
 - Titre manquant ajouté au graphique de longueur de cycle (Tendances).
