@@ -41,12 +41,39 @@ jobs:
       - name: Sync Capacitor (Android)
         run: npx cap sync android
 
+      # Détermine (et, sur un push main, crée + pousse) le tag de release à
+      # publier. Un tag poussé ici avec le token par défaut ne redéclenche PAS
+      # ce workflow (limitation GitHub Actions anti-boucle) : la Release est
+      # donc publiée directement dans CE run, pas via un second déclenchement.
+      - name: Determine release tag
+        id: release_tag
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            TAG="${GITHUB_REF_NAME}"
+          else
+            LATEST_TAG=$(git tag --list "v*" --sort=-v:refname | head -n1)
+            if [ -z "$LATEST_TAG" ]; then
+              TAG="v1.0.0"
+            else
+              IFS='.' read -r MAJOR MINOR PATCH <<< "${LATEST_TAG#v}"
+              TAG="v${MAJOR}.${MINOR}.$((PATCH + 1))"
+            fi
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag "$TAG"
+            git push origin "$TAG"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Tag de release : $TAG"
+
       - name: Stamp app version
         working-directory: android
         run: |
           VERSION_CODE="${{ github.run_number }}"
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            VERSION_NAME="${GITHUB_REF_NAME#v}"
+          RELEASE_TAG="${{ steps.release_tag.outputs.tag }}"
+          if [ -n "$RELEASE_TAG" ]; then
+            VERSION_NAME="${RELEASE_TAG#v}"
           else
             VERSION_NAME="0.0.0-${GITHUB_SHA::7}"
           fi
@@ -107,32 +134,10 @@ jobs:
           path: wenn-release.apk
           retention-days: 30
 
-      # Sur un simple push sur main (pas un tag), crée et pousse automatiquement
-      # le tag de release suivant (v1.0.0, v1.0.1, ...), en repartant du dernier
-      # tag "v*" existant. Ce push de tag redéclenche ce workflow avec
-      # github.ref = refs/tags/vX.Y.Z, qui rebuild et publie la Release
-      # (étape "Publish GitHub Release" ci-dessous). Un tag poussé manuellement
-      # (ex. pour un vrai bump majeur/mineur) est respecté : les prochains
-      # auto-tags repartent de lui.
-      - name: Auto-tag this build for release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          LATEST_TAG=$(git tag --list "v*" --sort=-v:refname | head -n1)
-          if [ -z "$LATEST_TAG" ]; then
-            NEXT_TAG="v1.0.0"
-          else
-            IFS='.' read -r MAJOR MINOR PATCH <<< "${LATEST_TAG#v}"
-            NEXT_TAG="v${MAJOR}.${MINOR}.$((PATCH + 1))"
-          fi
-          echo "Prochain tag : $NEXT_TAG"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "$NEXT_TAG"
-          git push origin "$NEXT_TAG"
-
       - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: steps.release_tag.outputs.tag != ''
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.release_tag.outputs.tag }}
           files: wenn-release.apk
           generate_release_notes: true
