@@ -11,7 +11,7 @@ import { resizeImageToDataUrl } from "../lib/localStore";
 import { exportCycleDaysAsFile, parseBackupFile } from "../lib/backup";
 import { computeCyclePrediction } from "../lib/cyclePredictions";
 import { requestNotificationPermission, schedulePeriodNotification } from "../lib/notifications";
-import { checkForUpdate, openUpdateDownload, type UpdateCheckResult } from "../lib/appUpdate";
+import { checkForUpdate, downloadAndInstallUpdate, openUpdateDownload, type UpdateCheckResult } from "../lib/appUpdate";
 import { Capacitor } from "@capacitor/core";
 import ThemeModeCard from "../components/ThemeModeCard";
 
@@ -193,6 +193,8 @@ function UpdateCard() {
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState<UpdateCheckResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const [progress, setProgress] = useState<number | null>(null);
 
   if (!Capacitor.isNativePlatform()) return null;
 
@@ -205,6 +207,26 @@ function UpdateCard() {
       setError("Impossible de vérifier les mises à jour pour le moment.");
     } finally {
       setChecking(false);
+    }
+  }
+
+  async function handleInstall() {
+    if (!result?.downloadUrl) return;
+    setError(null);
+
+    if (Capacitor.getPlatform() !== "android") {
+      await openUpdateDownload(result.downloadUrl);
+      return;
+    }
+
+    setDownloading(true);
+    setProgress(null);
+    try {
+      await downloadAndInstallUpdate(result.downloadUrl, setProgress);
+    } catch {
+      setError("Le téléchargement de la mise à jour a échoué.");
+    } finally {
+      setDownloading(false);
     }
   }
 
@@ -221,11 +243,12 @@ function UpdateCard() {
           {checking ? "Vérification..." : "Vérifier les mises à jour"}
         </button>
       ) : (
-        <button
-          className="btn btn-primary"
-          onClick={() => result.downloadUrl && openUpdateDownload(result.downloadUrl)}
-        >
-          Télécharger la version {result.latestVersion}
+        <button className="btn btn-primary" onClick={handleInstall} disabled={downloading}>
+          {downloading
+            ? progress != null
+              ? `Téléchargement... ${progress}%`
+              : "Téléchargement..."
+            : `Installer la version ${result.latestVersion}`}
         </button>
       )}
       {result && !result.updateAvailable && result.currentVersion && (

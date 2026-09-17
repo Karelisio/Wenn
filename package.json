@@ -14,6 +14,7 @@
     "@capacitor/app": "^7.0.1",
     "@capacitor/browser": "^7.0.5",
     "@capacitor/core": "^7.2.0",
+    "@capacitor/filesystem": "^7.1.8",
     "@capacitor/ios": "^7.2.0",
     "@capacitor/local-notifications": "^7.0.1",
     "@material/material-color-utilities": "^0.3.0",

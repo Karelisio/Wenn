@@ -1,7 +1,14 @@
 import { App } from "@capacitor/app";
-import { Capacitor } from "@capacitor/core";
+import { Capacitor, registerPlugin } from "@capacitor/core";
+import { Filesystem, Directory } from "@capacitor/filesystem";
 
 const REPO = "Karelisio/Wenn";
+
+interface ApkInstallerPlugin {
+  install(options: { path: string }): Promise<void>;
+}
+
+const ApkInstaller = registerPlugin<ApkInstallerPlugin>("ApkInstaller");
 
 export interface UpdateCheckResult {
   updateAvailable: boolean;
@@ -58,11 +65,60 @@ export async function checkForUpdate(): Promise<UpdateCheckResult> {
 }
 
 /**
- * Ouvre le téléchargement de l'APK dans le navigateur système : Android
- * prend le relais (téléchargement + proposition d'installation), sans
- * permission particulière à demander côté app.
+ * Ouvre le téléchargement de l'APK dans le navigateur système (utilisé en
+ * repli si le téléchargement in-app n'est pas disponible, ex. iOS).
  */
 export async function openUpdateDownload(url: string): Promise<void> {
   const { Browser } = await import("@capacitor/browser");
   await Browser.open({ url });
+}
+
+const UPDATE_APK_FILENAME = "wenn-update.apk";
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      resolve(result.substring(result.indexOf(",") + 1));
+    };
+    reader.onerror = () => reject(reader.error ?? new Error("Lecture du fichier impossible"));
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Télécharge l'APK de mise à jour directement dans l'app (sans navigateur) et
+ * lance l'installateur système Android dessus. `onProgress` reçoit un
+ * pourcentage (ou `null` si la taille du fichier est inconnue).
+ */
+export async function downloadAndInstallUpdate(
+  url: string,
+  onProgress?: (percent: number | null) => void
+): Promise<void> {
+  const response = await fetch(url);
+  if (!response.ok || !response.body) throw new Error("Téléchargement impossible");
+
+  const total = Number(response.headers.get("content-length")) || 0;
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) {
+      chunks.push(value);
+      received += value.length;
+      onProgress?.(total ? Math.round((received / total) * 100) : null);
+    }
+  }
+
+  const blob = new Blob(chunks as BlobPart[], { type: "application/vnd.android.package-archive" });
+  const base64 = await blobToBase64(blob);
+
+  await Filesystem.writeFile({ path: UPDATE_APK_FILENAME, directory: Directory.Cache, data: base64 });
+  const { uri } = await Filesystem.getUri({ path: UPDATE_APK_FILENAME, directory: Directory.Cache });
+
+  await ApkInstaller.install({ path: uri.replace("file://", "") });
 }
