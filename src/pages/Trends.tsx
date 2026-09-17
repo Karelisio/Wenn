@@ -47,7 +47,7 @@ export default function Trends() {
       [...cycleDays]
         .filter((d) => d.flow || d.vaginal_pain)
         .sort((a, b) => a.date.localeCompare(b.date))
-        .slice(-30)
+        .slice(-14)
         .map((d) => ({
           label: format(parseISO(d.date), "d MMM", { locale: fr }),
           flux: d.flow ? INTENSITY_VALUE[d.flow] : null,
@@ -168,14 +168,7 @@ export default function Trends() {
                 dot={{ r: 5, fill: "var(--md-sys-color-primary)", strokeWidth: 0 }}
                 activeDot={{ r: 6 }}
                 connectNulls
-              >
-                <LabelList
-                  dataKey="flux"
-                  position="top"
-                  formatter={(value: number) => intensityTickFormatter(value)}
-                  style={{ fontSize: 10, fontWeight: 700, fill: "var(--md-sys-color-on-surface)" }}
-                />
-              </Line>
+              />
             </LineChart>
           </ResponsiveContainer>
         )}
@@ -217,14 +210,7 @@ export default function Trends() {
                 dot={{ r: 5, fill: "var(--md-sys-color-tertiary, #7c5635)", strokeWidth: 0 }}
                 activeDot={{ r: 6 }}
                 connectNulls
-              >
-                <LabelList
-                  dataKey="douleur"
-                  position="top"
-                  formatter={(value: number) => intensityTickFormatter(value)}
-                  style={{ fontSize: 10, fontWeight: 700, fill: "var(--md-sys-color-on-surface)" }}
-                />
-              </Line>
+              />
             </LineChart>
           </ResponsiveContainer>
         )}

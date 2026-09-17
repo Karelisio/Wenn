@@ -22,15 +22,20 @@ public class WidgetDataPlugin extends Plugin {
         SharedPreferences.Editor editor = prefs.edit();
 
         Integer daysRemaining = call.getInt("daysRemaining");
+        Double cycleProgress = call.getDouble("cycleProgress");
         if (daysRemaining != null) {
             editor.putBoolean(WennWidgetProvider.KEY_HAS_DATA, true);
             editor.putInt(WennWidgetProvider.KEY_DAYS_REMAINING, daysRemaining);
         } else {
             editor.putBoolean(WennWidgetProvider.KEY_HAS_DATA, false);
         }
+        if (cycleProgress != null) {
+            editor.putFloat(WennWidgetProvider.KEY_CYCLE_PROGRESS, cycleProgress.floatValue());
+        }
         editor.apply();
 
         WennWidgetProvider.refreshAll(context);
+        WennOrbitWidgetProvider.refreshAll(context);
         call.resolve();
     }
 }

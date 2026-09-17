@@ -18,6 +18,7 @@ public class WennWidgetProvider extends AppWidgetProvider {
     static final String PREFS_NAME = "WennWidgetPrefs";
     static final String KEY_HAS_DATA = "has_data";
     static final String KEY_DAYS_REMAINING = "days_remaining";
+    static final String KEY_CYCLE_PROGRESS = "cycle_progress";
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {

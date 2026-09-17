@@ -12,7 +12,11 @@ export default function WidgetSync() {
     const daysRemaining = prediction.nextPeriodStart
       ? Math.ceil((new Date(prediction.nextPeriodStart).getTime() - Date.now()) / 86400000)
       : null;
-    syncDaysRemainingWidget(daysRemaining);
+    const cycleProgress =
+      prediction.currentCycleDay != null
+        ? ((prediction.currentCycleDay - 1) % prediction.averageCycleLength) / prediction.averageCycleLength
+        : null;
+    syncDaysRemainingWidget(daysRemaining, cycleProgress);
   }, [cycleDays, averageCycleLength, averagePeriodLength]);
 
   return null;
