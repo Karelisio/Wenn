@@ -82,9 +82,17 @@ export default function Settings() {
 
       <div className="card" style={{ marginBottom: 16 }}>
         <h3 className="section-title">Apparence — Material You</h3>
-        <p style={{ marginTop: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
-          Choisis une image : les couleurs de l'app s'adapteront automatiquement.
-        </p>
+        {Capacitor.getPlatform() === "android" ? (
+          <p style={{ marginTop: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
+            Les couleurs de l'app s'adaptent automatiquement à ton fond d'écran, comme le reste du
+            téléphone. L'image ci-dessous n'est utilisée que sur iOS et dans le navigateur.
+          </p>
+        ) : (
+          <p style={{ marginTop: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
+            Choisis une image : les couleurs de l'app s'adapteront automatiquement (sur Android, l'app
+            utilise directement le fond d'écran du téléphone).
+          </p>
+        )}
         {profile?.theme_image_url && (
           <img
             src={profile.theme_image_url}

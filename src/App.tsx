@@ -3,6 +3,7 @@ import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { CoupleProvider, useCouple } from "./context/CoupleContext";
 import { applyThemeFromImageUrl, applyThemeFromSeedColor, DEFAULT_SEED_COLOR } from "./lib/materialYou";
+import { getWallpaperSeedColor } from "./lib/wallpaperColor";
 import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
 import Calendar from "./pages/Calendar";
@@ -33,11 +34,30 @@ export default function App() {
   const { session, loading, profile } = useAuth();
 
   useEffect(() => {
-    if (profile?.theme_image_url) {
-      applyThemeFromImageUrl(profile.theme_image_url).catch(() => applyThemeFromSeedColor(DEFAULT_SEED_COLOR));
-    } else if (profile?.theme_seed_color) {
-      applyThemeFromSeedColor(profile.theme_seed_color);
+    let cancelled = false;
+
+    async function applyTheme() {
+      // Sur Android, le thème suit le fond d'écran du téléphone (propre à
+      // chaque appareil, non synchronisé) — comme le Material You natif.
+      const wallpaperColor = await getWallpaperSeedColor();
+      if (cancelled) return;
+      if (wallpaperColor) {
+        applyThemeFromSeedColor(wallpaperColor);
+        return;
+      }
+
+      // Sinon (iOS, navigateur), on retombe sur l'image de thème partagée.
+      if (profile?.theme_image_url) {
+        applyThemeFromImageUrl(profile.theme_image_url).catch(() => applyThemeFromSeedColor(DEFAULT_SEED_COLOR));
+      } else if (profile?.theme_seed_color) {
+        applyThemeFromSeedColor(profile.theme_seed_color);
+      }
     }
+
+    applyTheme();
+    return () => {
+      cancelled = true;
+    };
   }, [profile?.theme_image_url, profile?.theme_seed_color]);
 
   if (loading) return <div className="center-screen">Chargement...</div>;
