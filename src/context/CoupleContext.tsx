@@ -15,6 +15,7 @@ interface CoupleContextValue {
   createCouple: (name: string) => Promise<{ error: string | null }>;
   joinCouple: (inviteCode: string) => Promise<{ error: string | null }>;
   leaveCouple: () => Promise<{ error: string | null }>;
+  renameCouple: (name: string) => Promise<{ error: string | null }>;
   upsertCycleDay: (
     date: string,
     fields: Partial<Pick<CycleDay, "flow" | "symptoms" | "mood" | "note">>
@@ -173,6 +174,21 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
     return { error: null };
   }
 
+  async function renameCouple(name: string) {
+    if (!couple || !user) return { error: "Aucun cycle lié" };
+    const trimmed = name.trim();
+    if (!trimmed) return { error: "Le nom ne peut pas être vide" };
+    const { data, error } = await supabase
+      .from("couples")
+      .update({ name: trimmed })
+      .eq("id", couple.id)
+      .select()
+      .single();
+    if (error) return { error: error.message };
+    setCouple(data as Couple);
+    return { error: null };
+  }
+
   async function upsertCycleDay(
     date: string,
     fields: Partial<Pick<CycleDay, "flow" | "symptoms" | "mood" | "note">>
@@ -223,6 +239,7 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
         createCouple,
         joinCouple,
         leaveCouple,
+        renameCouple,
         upsertCycleDay,
         addPartnerNote,
         refresh: loadCouple,

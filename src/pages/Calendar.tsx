@@ -135,14 +135,20 @@ export default function Calendar() {
           <span>
             <span
               className="legend-dot"
-              style={{ background: "color-mix(in srgb, var(--md-sys-color-primary) 25%, transparent)" }}
+              style={{
+                background: "color-mix(in srgb, var(--md-sys-color-primary) 16%, transparent)",
+                boxShadow: "inset 0 0 0 1.5px var(--md-sys-color-primary)",
+              }}
             />
             Prédiction
           </span>
           <span>
             <span
               className="legend-dot"
-              style={{ background: "color-mix(in srgb, var(--md-sys-color-tertiary, #7c5635) 20%, transparent)" }}
+              style={{
+                background: "color-mix(in srgb, var(--md-sys-color-tertiary, #7c5635) 30%, transparent)",
+                boxShadow: "inset 0 0 0 1.5px color-mix(in srgb, var(--md-sys-color-tertiary, #7c5635) 65%, transparent)",
+              }}
             />
             Fenêtre fertile
           </span>

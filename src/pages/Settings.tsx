@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useCouple } from "../context/CoupleContext";
 import { useSoloProfile } from "../context/SoloContext";
@@ -273,14 +273,31 @@ function UpdateCard() {
 
 function DuoSettings() {
   const { user, profile, signOut, refreshProfile } = useAuth();
-  const { couple, role, otherPartyEmail, leaveCouple } = useCouple();
+  const { couple, role, otherPartyEmail, leaveCouple, renameCouple } = useCouple();
   const { cycleDays, averageCycleLength, averagePeriodLength, canEdit, upsertCycleDay } = useCycleData();
   const { isDark } = useThemeMode();
   const [uploading, setUploading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [nameInput, setNameInput] = useState(couple?.name ?? "");
+  const [renaming, setRenaming] = useState(false);
+  const [renameStatus, setRenameStatus] = useState<string | null>(null);
   const [daysBefore, setDaysBefore] = useState(profile?.notifications_days_before ?? 2);
   const [notifStatus, setNotifStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    setNameInput(couple?.name ?? "");
+  }, [couple?.name]);
+
+  async function handleRename() {
+    const trimmed = nameInput.trim();
+    if (!trimmed || trimmed === couple?.name) return;
+    setRenaming(true);
+    setRenameStatus(null);
+    const { error } = await renameCouple(trimmed);
+    setRenaming(false);
+    setRenameStatus(error ?? "Nom mis à jour ✅");
+  }
 
   const prediction = useMemo(
     () => computeCyclePrediction(cycleDays, averageCycleLength, averagePeriodLength),
@@ -390,8 +407,30 @@ function DuoSettings() {
 
       <div className="card" style={{ marginBottom: 16 }}>
         <h3 className="section-title">Couple lié</h3>
-        <p style={{ marginTop: 0 }}>
-          {couple?.name} — {role === "owner" ? "tu es la titulaire" : "tu as un accès partenaire (lecture)"}
+
+        {role === "owner" ? (
+          <div style={{ display: "flex", gap: 8, marginBottom: 4 }}>
+            <input
+              className="input"
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value)}
+              placeholder="Nom de l'espace"
+              style={{ flex: 1 }}
+            />
+            <button
+              className="btn btn-secondary"
+              onClick={handleRename}
+              disabled={renaming || !nameInput.trim() || nameInput.trim() === couple?.name}
+            >
+              {renaming ? "..." : "Renommer"}
+            </button>
+          </div>
+        ) : (
+          <p style={{ marginTop: 0 }}>{couple?.name}</p>
+        )}
+        <p style={{ marginTop: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
+          {role === "owner" ? "tu es la titulaire" : "tu as un accès partenaire (lecture)"}
+          {renameStatus && ` · ${renameStatus}`}
         </p>
 
         {(role === "partner" || (role === "owner" && couple?.partner_id)) && (

@@ -4,6 +4,10 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 → Mises à jour) au moment de chaque mise à jour.
 
 ## Non publié
+- Calendrier : meilleur contraste entre règles, prédiction et fenêtre
+  fertile (les couleurs se confondaient trop pour bien les distinguer).
+- Réglages > Couple lié permet maintenant de renommer l'espace partagé
+  (ex. "Nos règles" → autre nom), visible côté titulaire et partenaire.
 - Réglages affiche désormais clairement l'état de la synchronisation Duo
   ("🔗 Connecté·e avec ...") avec l'adresse e-mail de l'autre personne.
 - Suppression de la carte "Apparence — Material You" sur Android (le thème
