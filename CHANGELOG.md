@@ -5,6 +5,8 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 
 ## Non publié
 
+## v1.0.12 — 2026-09-17
+
 - Correctif widgets : le clic ouvrait plus rien, et certains lanceurs
   affichaient "Impossible de charger le widget" (taille min/max mal
   déclarée). Les deux widgets s'ouvrent maintenant sur l'app au tap et
