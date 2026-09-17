@@ -4,7 +4,7 @@
     "target": {
       "namespace": "android_app",
       "package_name": "io.karelisio.wenn",
-      "sha256_cert_fingerprints": ["PLACEHOLDER_SHA256_FINGERPRINT"]
+      "sha256_cert_fingerprints": ["3C:8E:A5:31:48:BA:B7:65:C7:F3:9B:88:97:DF:38:96:77:A7:B3:DB:52:CF:15:AA:83:3F:3C:30:B1:FF:CD:6C"]
     }
   }
 ]
