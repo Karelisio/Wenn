@@ -34,6 +34,12 @@ compte de la titulaire du cycle et celui de son/sa partenaire.
 - Notes libres par jour
 - Notifications natives avant le début des règles prévues
 - Graphique de tendance de la régularité du cycle sur plusieurs mois
+- Mode **Solo** (aucun compte, données 100 % locales) ou **Duo** (compte partagé,
+  synchronisé), au choix au premier lancement et modifiable depuis Réglages
+- Thème clair / sombre / système, en plus de la thématisation Material You
+- Sauvegarde : export/import JSON de l'historique, et mirroir local silencieux en mode
+  duo (filet de sécurité en cas de perte d'accès au compte)
+- Vérification et téléchargement des mises à jour directement depuis Réglages
 
 > La V1 ne couvre volontairement pas les fonctionnalités liées à la fertilité au-delà
 > de l'estimation indicative de la fenêtre fertile affichée dans le calendrier.
@@ -124,6 +130,19 @@ manuellement (`workflow_dispatch`). Il :
 
 L'APK étant toujours signé avec la **même clé**, il peut être installé par-dessus
 une version précédente sans désinstallation, sur les deux téléphones.
+
+**Versioning & mise à jour in-app.** Le workflow tamponne automatiquement le
+`versionCode`/`versionName` Android à partir du numéro de run et, pour un tag `v*`,
+du tag lui-même (ex. `v1.2.0` → version `1.2.0`). Le bouton **Réglages → Mises à
+jour** compare la version installée à la dernière Release GitHub publiée et ouvre le
+téléchargement de l'APK dans le navigateur si une mise à jour existe. Pour que ce
+bouton détecte une nouvelle version, il faut donc **taguer** la release (pas juste
+pousser sur `main`) :
+
+```bash
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
 
 ## Signature Android — génération du keystore
 

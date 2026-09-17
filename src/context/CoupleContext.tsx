@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, type React
 import { supabase } from "../lib/supabase";
 import { useAuth } from "./AuthContext";
 import { CycleDataContext, type CycleDataValue } from "./CycleDataContext";
+import { mirrorDuoBackup } from "../lib/backup";
 import type { Couple, CycleDay, FlowIntensity, PartnerNote } from "../types";
 
 interface CoupleContextValue {
@@ -107,6 +108,12 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
       supabase.removeChannel(channel);
     };
   }, [couple?.id]);
+
+  // Filet de sécurité : mirroir local silencieux des données de cycle, indépendant
+  // du lien avec un·e partenaire (protège contre la perte d'accès au compte/à l'app).
+  useEffect(() => {
+    if (couple && cycleDays.length > 0) mirrorDuoBackup(couple.id, cycleDays);
+  }, [couple, cycleDays]);
 
   async function createCouple(name: string) {
     if (!user) return { error: "Non connecté" };

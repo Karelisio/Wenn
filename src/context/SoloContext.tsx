@@ -3,6 +3,7 @@ import { CycleDataContext, type CycleDataValue } from "./CycleDataContext";
 import { loadLocalCycleDays, loadLocalSettings, saveLocalCycleDays, saveLocalSettings, type LocalSettings } from "../lib/localStore";
 import { applyThemeFromImageUrl, applyThemeFromSeedColor, DEFAULT_SEED_COLOR } from "../lib/materialYou";
 import { getWallpaperSeedColor } from "../lib/wallpaperColor";
+import { useThemeMode } from "./ThemeModeContext";
 import type { CycleDay } from "../types";
 
 interface SoloProfileContextValue {
@@ -21,6 +22,7 @@ export function useSoloProfile() {
 export function SoloProvider({ children }: { children: ReactNode }) {
   const [cycleDays, setCycleDays] = useState<CycleDay[]>(() => loadLocalCycleDays());
   const [settings, setSettings] = useState<LocalSettings>(() => loadLocalSettings());
+  const { isDark } = useThemeMode();
 
   useEffect(() => {
     let cancelled = false;
@@ -28,20 +30,22 @@ export function SoloProvider({ children }: { children: ReactNode }) {
       const wallpaperColor = await getWallpaperSeedColor();
       if (cancelled) return;
       if (wallpaperColor) {
-        applyThemeFromSeedColor(wallpaperColor);
+        applyThemeFromSeedColor(wallpaperColor, isDark);
         return;
       }
       if (settings.theme_image_url) {
-        applyThemeFromImageUrl(settings.theme_image_url).catch(() => applyThemeFromSeedColor(DEFAULT_SEED_COLOR));
+        applyThemeFromImageUrl(settings.theme_image_url, isDark).catch(() =>
+          applyThemeFromSeedColor(DEFAULT_SEED_COLOR, isDark)
+        );
       } else if (settings.theme_seed_color) {
-        applyThemeFromSeedColor(settings.theme_seed_color);
+        applyThemeFromSeedColor(settings.theme_seed_color, isDark);
       }
     }
     applyTheme();
     return () => {
       cancelled = true;
     };
-  }, [settings.theme_image_url, settings.theme_seed_color]);
+  }, [settings.theme_image_url, settings.theme_seed_color, isDark]);
 
   function updateSettings(fields: Partial<LocalSettings>) {
     setSettings((prev) => {

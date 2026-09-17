@@ -4,12 +4,16 @@ import { useCouple } from "../context/CoupleContext";
 import { useSoloProfile } from "../context/SoloContext";
 import { useCycleData } from "../context/CycleDataContext";
 import { useMode } from "../context/ModeContext";
+import { useThemeMode } from "../context/ThemeModeContext";
 import { supabase } from "../lib/supabase";
 import { applyThemeFromImageUrl } from "../lib/materialYou";
 import { resizeImageToDataUrl } from "../lib/localStore";
+import { exportCycleDaysAsFile, parseBackupFile } from "../lib/backup";
 import { computeCyclePrediction } from "../lib/cyclePredictions";
 import { requestNotificationPermission, schedulePeriodNotification } from "../lib/notifications";
+import { checkForUpdate, openUpdateDownload, type UpdateCheckResult } from "../lib/appUpdate";
 import { Capacitor } from "@capacitor/core";
+import ThemeModeCard from "../components/ThemeModeCard";
 
 export default function Settings() {
   const { mode } = useMode();
@@ -113,10 +117,125 @@ function NotificationsCard({
   );
 }
 
+function BackupCard({
+  cycleDays,
+  coupleName,
+  canRestore,
+  onRestore,
+}: {
+  cycleDays: import("../types").CycleDay[];
+  coupleName: string;
+  canRestore: boolean;
+  onRestore: (entries: import("../lib/backup").BackupEntry[]) => Promise<void>;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const [restoring, setRestoring] = useState(false);
+
+  async function handleFile(file: File) {
+    setRestoring(true);
+    setStatus(null);
+    try {
+      const entries = await parseBackupFile(file);
+      await onRestore(entries);
+      setStatus(`${entries.length} jour(s) restauré(s) ✅`);
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : "Échec de la restauration");
+    } finally {
+      setRestoring(false);
+    }
+  }
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <h3 className="section-title">Sauvegarde</h3>
+      <p style={{ marginTop: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
+        Exporte un fichier de secours avec tout ton historique. Utile en cas de changement de
+        téléphone ou de perte d'accès au compte.
+      </p>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button
+          className="btn btn-secondary"
+          onClick={() => exportCycleDaysAsFile(cycleDays, coupleName)}
+          disabled={cycleDays.length === 0}
+        >
+          Exporter mes données
+        </button>
+        {canRestore && (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json"
+              hidden
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFile(file);
+              }}
+            />
+            <button className="btn btn-text" onClick={() => fileInputRef.current?.click()} disabled={restoring}>
+              {restoring ? "Restauration..." : "Restaurer une sauvegarde"}
+            </button>
+          </>
+        )}
+      </div>
+      {status && <p style={{ fontSize: 13, marginTop: 10 }}>{status}</p>}
+    </div>
+  );
+}
+
+function UpdateCard() {
+  const [checking, setChecking] = useState(false);
+  const [result, setResult] = useState<UpdateCheckResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!Capacitor.isNativePlatform()) return null;
+
+  async function handleCheck() {
+    setChecking(true);
+    setError(null);
+    try {
+      setResult(await checkForUpdate());
+    } catch {
+      setError("Impossible de vérifier les mises à jour pour le moment.");
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <h3 className="section-title">Mises à jour</h3>
+      {result?.currentVersion && (
+        <p style={{ marginTop: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
+          Version installée : {result.currentVersion}
+        </p>
+      )}
+      {!result?.updateAvailable ? (
+        <button className="btn btn-secondary" onClick={handleCheck} disabled={checking}>
+          {checking ? "Vérification..." : "Vérifier les mises à jour"}
+        </button>
+      ) : (
+        <button
+          className="btn btn-primary"
+          onClick={() => result.downloadUrl && openUpdateDownload(result.downloadUrl)}
+        >
+          Télécharger la version {result.latestVersion}
+        </button>
+      )}
+      {result && !result.updateAvailable && result.currentVersion && (
+        <p style={{ fontSize: 13, marginTop: 10 }}>Tu as déjà la dernière version ✅</p>
+      )}
+      {error && <p style={{ fontSize: 13, marginTop: 10, color: "var(--md-sys-color-error)" }}>{error}</p>}
+    </div>
+  );
+}
+
 function DuoSettings() {
   const { user, profile, signOut, refreshProfile } = useAuth();
   const { couple, role } = useCouple();
-  const { cycleDays, averageCycleLength, averagePeriodLength } = useCycleData();
+  const { cycleDays, averageCycleLength, averagePeriodLength, canEdit, upsertCycleDay } = useCycleData();
+  const { isDark } = useThemeMode();
   const [uploading, setUploading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [daysBefore, setDaysBefore] = useState(profile?.notifications_days_before ?? 2);
@@ -139,7 +258,7 @@ function DuoSettings() {
     if (!uploadError) {
       const { data } = supabase.storage.from("theme-images").getPublicUrl(path);
       const publicUrl = data.publicUrl;
-      const seedHex = await applyThemeFromImageUrl(publicUrl);
+      const seedHex = await applyThemeFromImageUrl(publicUrl, isDark);
       await supabase
         .from("profiles")
         .update({ theme_image_url: publicUrl, theme_seed_color: seedHex })
@@ -147,6 +266,17 @@ function DuoSettings() {
       await refreshProfile();
     }
     setUploading(false);
+  }
+
+  async function handleRestoreBackup(entries: { date: string; flow: import("../types").FlowIntensity | null; symptoms: string[]; mood: string | null; note: string | null }[]) {
+    for (const entry of entries) {
+      await upsertCycleDay(entry.date, {
+        flow: entry.flow,
+        symptoms: entry.symptoms,
+        mood: entry.mood,
+        note: entry.note,
+      });
+    }
   }
 
   async function copyInviteCode() {
@@ -187,12 +317,23 @@ function DuoSettings() {
 
       <AppearanceCard imageUrl={profile?.theme_image_url} onPickImage={handleImagePick} uploading={uploading} />
 
+      <ThemeModeCard />
+
       <NotificationsCard
         daysBefore={daysBefore}
         onDaysBeforeChange={setDaysBefore}
         onSave={handleSaveNotifications}
         status={notifStatus}
       />
+
+      <BackupCard
+        cycleDays={cycleDays}
+        coupleName={couple?.name ?? ""}
+        canRestore={canEdit}
+        onRestore={handleRestoreBackup}
+      />
+
+      <UpdateCard />
 
       <div className="card" style={{ marginBottom: 16 }}>
         <h3 className="section-title">Couple lié</h3>
@@ -232,7 +373,8 @@ function DuoSettings() {
 
 function SoloSettings() {
   const { settings, updateSettings } = useSoloProfile();
-  const { cycleDays } = useCycleData();
+  const { cycleDays, upsertCycleDay } = useCycleData();
+  const { isDark } = useThemeMode();
   const [uploading, setUploading] = useState(false);
   const [daysBefore, setDaysBefore] = useState(settings.notifications_days_before);
   const [notifStatus, setNotifStatus] = useState<string | null>(null);
@@ -243,10 +385,21 @@ function SoloSettings() {
     setUploading(true);
     try {
       const dataUrl = await resizeImageToDataUrl(file);
-      const seedHex = await applyThemeFromImageUrl(dataUrl);
+      const seedHex = await applyThemeFromImageUrl(dataUrl, isDark);
       updateSettings({ theme_image_url: dataUrl, theme_seed_color: seedHex });
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function handleRestoreBackup(entries: { date: string; flow: import("../types").FlowIntensity | null; symptoms: string[]; mood: string | null; note: string | null }[]) {
+    for (const entry of entries) {
+      await upsertCycleDay(entry.date, {
+        flow: entry.flow,
+        symptoms: entry.symptoms,
+        mood: entry.mood,
+        note: entry.note,
+      });
     }
   }
 
@@ -287,12 +440,18 @@ function SoloSettings() {
 
       <AppearanceCard imageUrl={settings.theme_image_url} onPickImage={handleImagePick} uploading={uploading} />
 
+      <ThemeModeCard />
+
       <NotificationsCard
         daysBefore={daysBefore}
         onDaysBeforeChange={setDaysBefore}
         onSave={handleSaveNotifications}
         status={notifStatus}
       />
+
+      <BackupCard cycleDays={cycleDays} coupleName="Mon cycle" canRestore onRestore={handleRestoreBackup} />
+
+      <UpdateCard />
 
       <ModeSwitcher label="Passer en mode duo (compte partagé)" />
     </div>

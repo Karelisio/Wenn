@@ -7,17 +7,24 @@ function prefersDark(): boolean {
   return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
-/** Applique un thème Material You (variables CSS --md-sys-color-*) au document. */
-export async function applyThemeFromImageUrl(imageUrl: string): Promise<string> {
+/**
+ * Applique un thème Material You (variables CSS --md-sys-color-*) au document.
+ * `dark` force le mode clair/sombre ; omis, il suit la préférence système.
+ */
+export async function applyThemeFromImageUrl(imageUrl: string, dark?: boolean): Promise<string> {
   const image = await loadImage(imageUrl);
   const theme = await themeFromImage(image);
-  applyTheme(theme, { target: document.documentElement, dark: prefersDark() });
+  const isDark = dark ?? prefersDark();
+  applyTheme(theme, { target: document.documentElement, dark: isDark });
+  document.documentElement.style.colorScheme = isDark ? "dark" : "light";
   return hexFromArgb(theme.source);
 }
 
-export function applyThemeFromSeedColor(hex: string): void {
+export function applyThemeFromSeedColor(hex: string, dark?: boolean): void {
   const theme = themeFromSourceColor(argbFromHex(hex));
-  applyTheme(theme, { target: document.documentElement, dark: prefersDark() });
+  const isDark = dark ?? prefersDark();
+  applyTheme(theme, { target: document.documentElement, dark: isDark });
+  document.documentElement.style.colorScheme = isDark ? "dark" : "light";
 }
 
 function loadImage(url: string): Promise<HTMLImageElement> {
