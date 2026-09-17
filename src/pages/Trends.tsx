@@ -2,15 +2,15 @@ import { useMemo } from "react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { useCouple } from "../context/CoupleContext";
+import { useCycleData } from "../context/CycleDataContext";
 import { computeCyclePrediction } from "../lib/cyclePredictions";
 
 export default function Trends() {
-  const { couple, cycleDays } = useCouple();
+  const { cycleDays, averageCycleLength, averagePeriodLength } = useCycleData();
 
   const prediction = useMemo(
-    () => computeCyclePrediction(cycleDays, couple?.average_cycle_length, couple?.average_period_length),
-    [cycleDays, couple]
+    () => computeCyclePrediction(cycleDays, averageCycleLength, averagePeriodLength),
+    [cycleDays, averageCycleLength, averagePeriodLength]
   );
 
   const chartData = prediction.cycleLengths.map((c) => ({

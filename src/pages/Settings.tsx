@@ -1,29 +1,134 @@
 import { useMemo, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useCouple } from "../context/CoupleContext";
+import { useSoloProfile } from "../context/SoloContext";
+import { useCycleData } from "../context/CycleDataContext";
+import { useMode } from "../context/ModeContext";
 import { supabase } from "../lib/supabase";
 import { applyThemeFromImageUrl } from "../lib/materialYou";
+import { resizeImageToDataUrl } from "../lib/localStore";
 import { computeCyclePrediction } from "../lib/cyclePredictions";
 import { requestNotificationPermission, schedulePeriodNotification } from "../lib/notifications";
 import { Capacitor } from "@capacitor/core";
 
 export default function Settings() {
-  const { user, profile, signOut, refreshProfile } = useAuth();
-  const { couple, role, cycleDays } = useCouple();
+  const { mode } = useMode();
+  return mode === "solo" ? <SoloSettings /> : <DuoSettings />;
+}
+
+function ModeSwitcher({ label }: { label: string }) {
+  const { resetMode } = useMode();
+  return (
+    <button className="btn btn-text" onClick={resetMode}>
+      {label}
+    </button>
+  );
+}
+
+function AppearanceCard({
+  imageUrl,
+  onPickImage,
+  uploading,
+}: {
+  imageUrl: string | null | undefined;
+  onPickImage: (file: File) => void;
+  uploading: boolean;
+}) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <h3 className="section-title">Apparence — Material You</h3>
+      {Capacitor.getPlatform() === "android" ? (
+        <p style={{ marginTop: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
+          Les couleurs de l'app s'adaptent automatiquement à ton fond d'écran, comme le reste du
+          téléphone. L'image ci-dessous n'est utilisée que sur iOS et dans le navigateur.
+        </p>
+      ) : (
+        <p style={{ marginTop: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
+          Choisis une image : les couleurs de l'app s'adapteront automatiquement (sur Android, l'app
+          utilise directement le fond d'écran du téléphone).
+        </p>
+      )}
+      {imageUrl && (
+        <img
+          src={imageUrl}
+          alt="Fond choisi"
+          style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: "var(--radius-m)", marginBottom: 12 }}
+        />
+      )}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) onPickImage(file);
+        }}
+      />
+      <button className="btn btn-secondary" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+        {uploading ? "Chargement..." : "Choisir une image"}
+      </button>
+    </div>
+  );
+}
+
+function NotificationsCard({
+  daysBefore,
+  onDaysBeforeChange,
+  onSave,
+  status,
+}: {
+  daysBefore: number;
+  onDaysBeforeChange: (n: number) => void;
+  onSave: () => void;
+  status: string | null;
+}) {
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <h3 className="section-title">Notifications</h3>
+      <p style={{ marginTop: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
+        Reçois une alerte avant le début prévu de tes règles.
+      </p>
+      <label style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+        <span style={{ flex: 1 }}>Prévenir</span>
+        <select
+          className="input"
+          style={{ width: 140 }}
+          value={daysBefore}
+          onChange={(e) => onDaysBeforeChange(Number(e.target.value))}
+        >
+          <option value={0}>Le jour J</option>
+          <option value={1}>1 jour avant</option>
+          <option value={2}>2 jours avant</option>
+          <option value={3}>3 jours avant</option>
+        </select>
+      </label>
+      <button className="btn btn-primary" onClick={onSave}>
+        Activer les rappels
+      </button>
+      {status && <p style={{ fontSize: 13, marginTop: 10 }}>{status}</p>}
+    </div>
+  );
+}
+
+function DuoSettings() {
+  const { user, profile, signOut, refreshProfile } = useAuth();
+  const { couple, role } = useCouple();
+  const { cycleDays, averageCycleLength, averagePeriodLength } = useCycleData();
   const [uploading, setUploading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [daysBefore, setDaysBefore] = useState(profile?.notifications_days_before ?? 2);
   const [notifStatus, setNotifStatus] = useState<string | null>(null);
 
   const prediction = useMemo(
-    () => computeCyclePrediction(cycleDays, couple?.average_cycle_length, couple?.average_period_length),
-    [cycleDays, couple]
+    () => computeCyclePrediction(cycleDays, averageCycleLength, averagePeriodLength),
+    [cycleDays, averageCycleLength, averagePeriodLength]
   );
 
-  async function handleImagePick(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
+  async function handleImagePick(file: File) {
+    if (!user) return;
     setUploading(true);
 
     const path = `${user.id}/${Date.now()}-${file.name}`;
@@ -80,56 +185,14 @@ export default function Settings() {
         <p style={{ margin: 0, color: "var(--md-sys-color-on-surface-variant)" }}>{user?.email}</p>
       </header>
 
-      <div className="card" style={{ marginBottom: 16 }}>
-        <h3 className="section-title">Apparence — Material You</h3>
-        {Capacitor.getPlatform() === "android" ? (
-          <p style={{ marginTop: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
-            Les couleurs de l'app s'adaptent automatiquement à ton fond d'écran, comme le reste du
-            téléphone. L'image ci-dessous n'est utilisée que sur iOS et dans le navigateur.
-          </p>
-        ) : (
-          <p style={{ marginTop: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
-            Choisis une image : les couleurs de l'app s'adapteront automatiquement (sur Android, l'app
-            utilise directement le fond d'écran du téléphone).
-          </p>
-        )}
-        {profile?.theme_image_url && (
-          <img
-            src={profile.theme_image_url}
-            alt="Fond choisi"
-            style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: "var(--radius-m)", marginBottom: 12 }}
-          />
-        )}
-        <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleImagePick} />
-        <button className="btn btn-secondary" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-          {uploading ? "Chargement..." : "Choisir une image"}
-        </button>
-      </div>
+      <AppearanceCard imageUrl={profile?.theme_image_url} onPickImage={handleImagePick} uploading={uploading} />
 
-      <div className="card" style={{ marginBottom: 16 }}>
-        <h3 className="section-title">Notifications</h3>
-        <p style={{ marginTop: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
-          Reçois une alerte avant le début prévu de tes règles.
-        </p>
-        <label style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-          <span style={{ flex: 1 }}>Prévenir</span>
-          <select
-            className="input"
-            style={{ width: 140 }}
-            value={daysBefore}
-            onChange={(e) => setDaysBefore(Number(e.target.value))}
-          >
-            <option value={0}>Le jour J</option>
-            <option value={1}>1 jour avant</option>
-            <option value={2}>2 jours avant</option>
-            <option value={3}>3 jours avant</option>
-          </select>
-        </label>
-        <button className="btn btn-primary" onClick={handleSaveNotifications}>
-          Activer les rappels
-        </button>
-        {notifStatus && <p style={{ fontSize: 13, marginTop: 10 }}>{notifStatus}</p>}
-      </div>
+      <NotificationsCard
+        daysBefore={daysBefore}
+        onDaysBeforeChange={setDaysBefore}
+        onSave={handleSaveNotifications}
+        status={notifStatus}
+      />
 
       <div className="card" style={{ marginBottom: 16 }}>
         <h3 className="section-title">Couple lié</h3>
@@ -157,9 +220,81 @@ export default function Settings() {
         )}
       </div>
 
-      <button className="btn btn-text" onClick={signOut}>
-        Se déconnecter
-      </button>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button className="btn btn-text" onClick={signOut}>
+          Se déconnecter
+        </button>
+        <ModeSwitcher label="Passer en mode solo" />
+      </div>
+    </div>
+  );
+}
+
+function SoloSettings() {
+  const { settings, updateSettings } = useSoloProfile();
+  const { cycleDays } = useCycleData();
+  const [uploading, setUploading] = useState(false);
+  const [daysBefore, setDaysBefore] = useState(settings.notifications_days_before);
+  const [notifStatus, setNotifStatus] = useState<string | null>(null);
+
+  const prediction = useMemo(() => computeCyclePrediction(cycleDays, 28, 5), [cycleDays]);
+
+  async function handleImagePick(file: File) {
+    setUploading(true);
+    try {
+      const dataUrl = await resizeImageToDataUrl(file);
+      const seedHex = await applyThemeFromImageUrl(dataUrl);
+      updateSettings({ theme_image_url: dataUrl, theme_seed_color: seedHex });
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleSaveNotifications() {
+    updateSettings({ notifications_days_before: daysBefore });
+
+    if (!Capacitor.isNativePlatform()) {
+      setNotifStatus("Les notifications natives ne sont actives que dans l'app installée (Android/iOS).");
+      return;
+    }
+    const granted = await requestNotificationPermission();
+    if (!granted) {
+      setNotifStatus("Permission de notification refusée.");
+      return;
+    }
+    if (prediction.nextPeriodStart) {
+      await schedulePeriodNotification(prediction.nextPeriodStart, daysBefore);
+      setNotifStatus("Notification programmée ✅");
+    } else {
+      setNotifStatus("Pas encore assez de données pour prédire la prochaine notification.");
+    }
+  }
+
+  return (
+    <div className="screen">
+      <header style={{ marginBottom: 16 }}>
+        <h1 style={{ margin: "0 0 2px" }}>Réglages</h1>
+        <p style={{ margin: 0, color: "var(--md-sys-color-on-surface-variant)" }}>Mode solo</p>
+      </header>
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h3 className="section-title">Mode solo</h3>
+        <p style={{ marginTop: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
+          Aucun compte : tes données restent uniquement sur cet appareil et ne sont partagées avec
+          personne.
+        </p>
+      </div>
+
+      <AppearanceCard imageUrl={settings.theme_image_url} onPickImage={handleImagePick} uploading={uploading} />
+
+      <NotificationsCard
+        daysBefore={daysBefore}
+        onDaysBeforeChange={setDaysBefore}
+        onSave={handleSaveNotifications}
+        status={notifStatus}
+      />
+
+      <ModeSwitcher label="Passer en mode duo (compte partagé)" />
     </div>
   );
 }

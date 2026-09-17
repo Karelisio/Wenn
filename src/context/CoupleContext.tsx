@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "./AuthContext";
+import { CycleDataContext, type CycleDataValue } from "./CycleDataContext";
 import type { Couple, CycleDay, FlowIntensity, PartnerNote } from "../types";
 
 interface CoupleContextValue {
@@ -151,6 +152,20 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
 
   const role: "owner" | "partner" | null = !couple || !user ? null : couple.owner_id === user.id ? "owner" : "partner";
 
+  const cycleDataValue: CycleDataValue = {
+    mode: "duo",
+    coupleName: couple?.name ?? "",
+    role,
+    canEdit: role === "owner",
+    averageCycleLength: couple?.average_cycle_length ?? 28,
+    averagePeriodLength: couple?.average_period_length ?? 5,
+    cycleDays,
+    partnerNotes,
+    loading,
+    upsertCycleDay,
+    addPartnerNote,
+  };
+
   return (
     <CoupleContext.Provider
       value={{
@@ -166,7 +181,7 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
         refresh: loadCouple,
       }}
     >
-      {children}
+      <CycleDataContext.Provider value={cycleDataValue}>{children}</CycleDataContext.Provider>
     </CoupleContext.Provider>
   );
 }

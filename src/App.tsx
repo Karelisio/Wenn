@@ -2,8 +2,11 @@ import { useEffect } from "react";
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { CoupleProvider, useCouple } from "./context/CoupleContext";
+import { SoloProvider } from "./context/SoloContext";
+import { useMode } from "./context/ModeContext";
 import { applyThemeFromImageUrl, applyThemeFromSeedColor, DEFAULT_SEED_COLOR } from "./lib/materialYou";
 import { getWallpaperSeedColor } from "./lib/wallpaperColor";
+import ModeSelect from "./pages/ModeSelect";
 import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
 import Calendar from "./pages/Calendar";
@@ -12,11 +15,6 @@ import Settings from "./pages/Settings";
 import BottomNav from "./components/BottomNav";
 
 function AppShell() {
-  const { couple, loading } = useCouple();
-
-  if (loading) return <div className="center-screen">Chargement...</div>;
-  if (!couple) return <Onboarding />;
-
   return (
     <div className="app-shell">
       <Routes>
@@ -30,7 +28,14 @@ function AppShell() {
   );
 }
 
-export default function App() {
+function DuoGate() {
+  const { couple, loading } = useCouple();
+  if (loading) return <div className="center-screen">Chargement...</div>;
+  if (!couple) return <Onboarding />;
+  return <AppShell />;
+}
+
+function DuoApp() {
   const { session, loading, profile } = useAuth();
 
   useEffect(() => {
@@ -64,10 +69,26 @@ export default function App() {
   if (!session) return <Login />;
 
   return (
+    <CoupleProvider>
+      <DuoGate />
+    </CoupleProvider>
+  );
+}
+
+function SoloApp() {
+  return (
+    <SoloProvider>
+      <AppShell />
+    </SoloProvider>
+  );
+}
+
+export default function App() {
+  const { mode } = useMode();
+
+  return (
     <HashRouter>
-      <CoupleProvider>
-        <AppShell />
-      </CoupleProvider>
+      {mode === null ? <ModeSelect /> : mode === "solo" ? <SoloApp /> : <DuoApp />}
     </HashRouter>
   );
 }

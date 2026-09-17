@@ -12,20 +12,20 @@ import {
   startOfWeek,
 } from "date-fns";
 import { fr } from "date-fns/locale";
-import { useCouple } from "../context/CoupleContext";
+import { useCycleData } from "../context/CycleDataContext";
 import { computeCyclePrediction, isWithinRange } from "../lib/cyclePredictions";
 import DaySheet from "../components/DaySheet";
 
 const WEEKDAYS = ["L", "M", "M", "J", "V", "S", "D"];
 
 export default function Calendar() {
-  const { couple, cycleDays, role } = useCouple();
+  const { coupleName, cycleDays, role, averageCycleLength, averagePeriodLength } = useCycleData();
   const [month, setMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const prediction = useMemo(
-    () => computeCyclePrediction(cycleDays, couple?.average_cycle_length, couple?.average_period_length),
-    [cycleDays, couple]
+    () => computeCyclePrediction(cycleDays, averageCycleLength, averagePeriodLength),
+    [cycleDays, averageCycleLength, averagePeriodLength]
   );
 
   const days = useMemo(() => {
@@ -72,7 +72,7 @@ export default function Calendar() {
       <header style={{ marginBottom: 16 }}>
         <h1 style={{ margin: "0 0 2px" }}>Wenn 🌸</h1>
         <p style={{ margin: 0, color: "var(--md-sys-color-on-surface-variant)" }}>
-          {couple?.name} {role === "partner" && "· lecture"}
+          {coupleName} {role === "partner" && "· lecture"}
         </p>
       </header>
 

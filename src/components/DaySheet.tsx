@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
-import { useCouple } from "../context/CoupleContext";
+import { useCycleData } from "../context/CycleDataContext";
 import { SYMPTOM_LABELS, SYMPTOM_OPTIONS, MOOD_OPTIONS, type FlowIntensity } from "../types";
 
 const FLOW_OPTIONS: { value: FlowIntensity; label: string; emoji: string }[] = [
@@ -11,7 +11,7 @@ const FLOW_OPTIONS: { value: FlowIntensity; label: string; emoji: string }[] = [
 ];
 
 export default function DaySheet({ date, onClose }: { date: string; onClose: () => void }) {
-  const { cycleDays, partnerNotes, upsertCycleDay, addPartnerNote, role } = useCouple();
+  const { mode, cycleDays, partnerNotes, upsertCycleDay, addPartnerNote, canEdit } = useCycleData();
   const existing = cycleDays.find((d) => d.date === date);
   const dayNotes = partnerNotes.filter((n) => n.date === date);
 
@@ -21,8 +21,6 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
   const [note, setNote] = useState(existing?.note ?? "");
   const [newPartnerNote, setNewPartnerNote] = useState("");
   const [saving, setSaving] = useState(false);
-
-  const canEdit = role === "owner";
 
   useEffect(() => {
     setFlow(existing?.flow ?? null);
@@ -130,7 +128,7 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
           </section>
         )}
 
-        {!canEdit && (
+        {mode === "duo" && !canEdit && (
           <section style={{ marginBottom: 20 }}>
             <h3 className="section-title">Ajouter un mot doux / rappel</h3>
             <div style={{ display: "flex", gap: 8 }}>
