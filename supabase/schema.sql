@@ -100,6 +100,36 @@ create policy "couples: owner can update settings"
   on public.couples for update
   using (auth.uid() = owner_id);
 
+create policy "couples: owner delete"
+  on public.couples for delete
+  using (auth.uid() = owner_id);
+
+-- Quitter un espace : la titulaire supprime tout (cascade), le/la partenaire se délie
+-- simplement (les données de la titulaire ne sont jamais affectées par ce choix).
+create or replace function public.leave_couple()
+returns void
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_couple public.couples;
+begin
+  select * into v_couple from public.couples
+  where owner_id = auth.uid() or partner_id = auth.uid()
+  limit 1;
+
+  if v_couple.id is null then
+    return;
+  end if;
+
+  if v_couple.owner_id = auth.uid() then
+    delete from public.couples where id = v_couple.id;
+  else
+    update public.couples set partner_id = null where id = v_couple.id;
+  end if;
+end;
+$$;
+
 -- Rejoindre un couple via un code d'invitation (sécurisé, évite le hijack de partner_id)
 create or replace function public.join_couple(p_invite_code text)
 returns public.couples

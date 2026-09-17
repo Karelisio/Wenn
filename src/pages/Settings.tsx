@@ -238,11 +238,12 @@ function UpdateCard() {
 
 function DuoSettings() {
   const { user, profile, signOut, refreshProfile } = useAuth();
-  const { couple, role } = useCouple();
+  const { couple, role, leaveCouple } = useCouple();
   const { cycleDays, averageCycleLength, averagePeriodLength, canEdit, upsertCycleDay } = useCycleData();
   const { isDark } = useThemeMode();
   const [uploading, setUploading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [daysBefore, setDaysBefore] = useState(profile?.notifications_days_before ?? 2);
   const [notifStatus, setNotifStatus] = useState<string | null>(null);
 
@@ -282,6 +283,18 @@ function DuoSettings() {
         note: entry.note,
       });
     }
+  }
+
+  async function handleLeaveCouple() {
+    const warning =
+      role === "owner"
+        ? "Quitter supprimera définitivement cet espace et tout son historique (règles, symptômes, notes). Le lien avec ton/ta partenaire sera aussi rompu. Continuer ?"
+        : "Tu vas te délier de cet espace (tu pourras en rejoindre un autre ou en créer un). Les données de la titulaire ne sont pas affectées. Continuer ?";
+    if (!window.confirm(warning)) return;
+    setLeaving(true);
+    const { error } = await leaveCouple();
+    setLeaving(false);
+    if (error) window.alert(error);
   }
 
   async function copyInviteCode() {
@@ -364,6 +377,9 @@ function DuoSettings() {
             )}
           </>
         )}
+        <button className="btn btn-text" onClick={handleLeaveCouple} disabled={leaving} style={{ marginTop: 12, color: "var(--md-sys-color-error)" }}>
+          {leaving ? "..." : role === "owner" ? "Supprimer cet espace / changer de rôle" : "Quitter cet espace / changer de rôle"}
+        </button>
       </div>
 
       <div style={{ display: "flex", gap: 8 }}>

@@ -13,6 +13,7 @@ interface CoupleContextValue {
   loading: boolean;
   createCouple: (name: string) => Promise<{ error: string | null }>;
   joinCouple: (inviteCode: string) => Promise<{ error: string | null }>;
+  leaveCouple: () => Promise<{ error: string | null }>;
   upsertCycleDay: (
     date: string,
     fields: Partial<Pick<CycleDay, "flow" | "symptoms" | "mood" | "note">>
@@ -135,6 +136,15 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
     return { error: null };
   }
 
+  async function leaveCouple() {
+    const { error } = await supabase.rpc("leave_couple");
+    if (error) return { error: error.message };
+    setCouple(null);
+    setCycleDays([]);
+    setPartnerNotes([]);
+    return { error: null };
+  }
+
   async function upsertCycleDay(
     date: string,
     fields: Partial<Pick<CycleDay, "flow" | "symptoms" | "mood" | "note">>
@@ -183,6 +193,7 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
         loading,
         createCouple,
         joinCouple,
+        leaveCouple,
         upsertCycleDay,
         addPartnerNote,
         refresh: loadCouple,
