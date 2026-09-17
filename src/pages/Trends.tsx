@@ -2,11 +2,11 @@ import { useMemo } from "react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
-  Bar,
-  BarChart,
   CartesianGrid,
-  Cell,
+  LabelList,
   Legend,
+  Line,
+  LineChart,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -20,8 +20,8 @@ import type { FlowIntensity } from "../types";
 const INTENSITY_VALUE: Record<FlowIntensity, number> = { leger: 1, moyen: 2, abondant: 3 };
 const INTENSITY_LABEL: Record<number, string> = { 1: "Léger", 2: "Moyen", 3: "Fort" };
 
-function intensityTickFormatter(value: number): string {
-  return INTENSITY_LABEL[value] ?? "";
+function intensityTickFormatter(value: number | null | undefined): string {
+  return value != null ? (INTENSITY_LABEL[value] ?? "") : "";
 }
 
 export default function Trends() {
@@ -50,8 +50,8 @@ export default function Trends() {
         .slice(-30)
         .map((d) => ({
           label: format(parseISO(d.date), "d MMM", { locale: fr }),
-          flux: d.flow ? INTENSITY_VALUE[d.flow] : 0,
-          douleur: d.vaginal_pain ? INTENSITY_VALUE[d.vaginal_pain] : 0,
+          flux: d.flow ? INTENSITY_VALUE[d.flow] : null,
+          douleur: d.vaginal_pain ? INTENSITY_VALUE[d.vaginal_pain] : null,
         })),
     [cycleDays]
   );
@@ -94,7 +94,7 @@ export default function Trends() {
           </p>
         ) : (
           <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={chartData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+            <LineChart data={chartData} margin={{ top: 20, right: 12, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--md-sys-color-outline)" opacity={0.2} />
               <XAxis dataKey="label" tick={{ fontSize: 12 }} stroke="var(--md-sys-color-on-surface-variant)" />
               <YAxis tick={{ fontSize: 12 }} stroke="var(--md-sys-color-on-surface-variant)" width={32} />
@@ -112,25 +112,35 @@ export default function Trends() {
                 }}
                 formatter={(value: number) => [`${value} jours`, "Longueur du cycle"]}
               />
-              <Bar dataKey="length" radius={[8, 8, 8, 8]}>
-                {chartData.map((_, i) => (
-                  <Cell key={i} fill="var(--md-sys-color-primary)" />
-                ))}
-              </Bar>
-            </BarChart>
+              <Line
+                type="monotone"
+                dataKey="length"
+                stroke="var(--md-sys-color-primary)"
+                strokeWidth={2.5}
+                dot={{ r: 5, fill: "var(--md-sys-color-primary)", strokeWidth: 0 }}
+                activeDot={{ r: 6 }}
+              >
+                <LabelList
+                  dataKey="length"
+                  position="top"
+                  formatter={(value: number) => `${value}`}
+                  style={{ fontSize: 12, fontWeight: 700, fill: "var(--md-sys-color-on-surface)" }}
+                />
+              </Line>
+            </LineChart>
           </ResponsiveContainer>
         )}
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>
         <h3 className="section-title">🩸 Flux</h3>
-        {intensityData.filter((d) => d.flux > 0).length === 0 ? (
+        {intensityData.filter((d) => (d.flux ?? 0) > 0).length === 0 ? (
           <p style={{ margin: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
             Pas encore de flux enregistré.
           </p>
         ) : (
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={intensityData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+          <ResponsiveContainer width="100%" height={210}>
+            <LineChart data={intensityData} margin={{ top: 20, right: 12, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--md-sys-color-outline)" opacity={0.2} />
               <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="var(--md-sys-color-on-surface-variant)" />
               <YAxis
@@ -150,21 +160,36 @@ export default function Trends() {
                 }}
                 formatter={(value: number) => [intensityTickFormatter(value) || "—", "Flux"]}
               />
-              <Bar dataKey="flux" radius={[6, 6, 6, 6]} fill="var(--md-sys-color-primary)" />
-            </BarChart>
+              <Line
+                type="monotone"
+                dataKey="flux"
+                stroke="var(--md-sys-color-primary)"
+                strokeWidth={2.5}
+                dot={{ r: 5, fill: "var(--md-sys-color-primary)", strokeWidth: 0 }}
+                activeDot={{ r: 6 }}
+                connectNulls
+              >
+                <LabelList
+                  dataKey="flux"
+                  position="top"
+                  formatter={(value: number) => intensityTickFormatter(value)}
+                  style={{ fontSize: 10, fontWeight: 700, fill: "var(--md-sys-color-on-surface)" }}
+                />
+              </Line>
+            </LineChart>
           </ResponsiveContainer>
         )}
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>
         <h3 className="section-title">🔥 Douleurs vaginales</h3>
-        {intensityData.filter((d) => d.douleur > 0).length === 0 ? (
+        {intensityData.filter((d) => (d.douleur ?? 0) > 0).length === 0 ? (
           <p style={{ margin: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
             Pas encore de douleur vaginale enregistrée.
           </p>
         ) : (
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={intensityData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+          <ResponsiveContainer width="100%" height={210}>
+            <LineChart data={intensityData} margin={{ top: 20, right: 12, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--md-sys-color-outline)" opacity={0.2} />
               <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="var(--md-sys-color-on-surface-variant)" />
               <YAxis
@@ -184,8 +209,23 @@ export default function Trends() {
                 }}
                 formatter={(value: number) => [intensityTickFormatter(value) || "—", "Douleur vaginale"]}
               />
-              <Bar dataKey="douleur" radius={[6, 6, 6, 6]} fill="var(--md-sys-color-tertiary, #7c5635)" />
-            </BarChart>
+              <Line
+                type="monotone"
+                dataKey="douleur"
+                stroke="var(--md-sys-color-tertiary, #7c5635)"
+                strokeWidth={2.5}
+                dot={{ r: 5, fill: "var(--md-sys-color-tertiary, #7c5635)", strokeWidth: 0 }}
+                activeDot={{ r: 6 }}
+                connectNulls
+              >
+                <LabelList
+                  dataKey="douleur"
+                  position="top"
+                  formatter={(value: number) => intensityTickFormatter(value)}
+                  style={{ fontSize: 10, fontWeight: 700, fill: "var(--md-sys-color-on-surface)" }}
+                />
+              </Line>
+            </LineChart>
           </ResponsiveContainer>
         )}
       </div>
@@ -198,7 +238,7 @@ export default function Trends() {
           </p>
         ) : (
           <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={intensityData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+            <LineChart data={intensityData} margin={{ top: 8, right: 12, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--md-sys-color-outline)" opacity={0.2} />
               <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="var(--md-sys-color-on-surface-variant)" />
               <YAxis
@@ -219,14 +259,27 @@ export default function Trends() {
                 formatter={(value: number, name: string) => [intensityTickFormatter(value) || "—", name]}
               />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Bar dataKey="flux" name="Flux" radius={[6, 6, 0, 0]} fill="var(--md-sys-color-primary)" />
-              <Bar
+              <Line
+                type="monotone"
+                dataKey="flux"
+                name="Flux"
+                stroke="var(--md-sys-color-primary)"
+                strokeWidth={2.5}
+                dot={{ r: 4, fill: "var(--md-sys-color-primary)", strokeWidth: 0 }}
+                activeDot={{ r: 6 }}
+                connectNulls
+              />
+              <Line
+                type="monotone"
                 dataKey="douleur"
                 name="Douleur vaginale"
-                radius={[6, 6, 0, 0]}
-                fill="var(--md-sys-color-tertiary, #7c5635)"
+                stroke="var(--md-sys-color-tertiary, #7c5635)"
+                strokeWidth={2.5}
+                dot={{ r: 4, fill: "var(--md-sys-color-tertiary, #7c5635)", strokeWidth: 0 }}
+                activeDot={{ r: 6 }}
+                connectNulls
               />
-            </BarChart>
+            </LineChart>
           </ResponsiveContainer>
         )}
       </div>

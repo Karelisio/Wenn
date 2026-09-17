@@ -4,6 +4,9 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 → Mises à jour) au moment de chaque mise à jour.
 
 ## Non publié
+- Les graphiques de Tendances passent de barres à des courbes avec points et
+  valeurs affichées (régularité du cycle, flux, douleurs vaginales,
+  comparaison), plus lisibles.
 - Nouveau widget d'écran d'accueil Android affichant le nombre de jours
   restants avant les prochaines règles.
 
