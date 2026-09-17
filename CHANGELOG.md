@@ -5,6 +5,10 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 
 ## Non publié
 
+## v1.0.15 — 2026-09-17
+
+
+
 ## v1.0.14 — 2026-09-17
 
 - Mode Duo utilisable hors connexion : la dernière copie enregistrée
