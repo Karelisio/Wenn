@@ -1,17 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Silhouette utilisée par les icônes thématisées Android 13+ : recolorée
+     automatiquement par le système selon le fond d'écran (la couleur ici
+     n'a pas d'importance, seule la forme/alpha compte). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Anneau : cercle r=28 centré en (54,54) -->
     <path
         android:pathData="M26,54 a28,28 0 1,0 56,0 a28,28 0 1,0 -56,0"
-        android:strokeColor="#E0577E"
+        android:strokeColor="#000000"
         android:strokeWidth="7"
         android:fillColor="#00000000" />
-    <!-- Point : cercle r=10 centré en (72,33) -->
     <path
         android:pathData="M62,33 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0"
-        android:fillColor="#A13A5C" />
+        android:fillColor="#000000" />
 </vector>

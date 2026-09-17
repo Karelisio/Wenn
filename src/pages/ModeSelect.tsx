@@ -1,4 +1,5 @@
 import { useMode } from "../context/ModeContext";
+import OrbitMark from "../components/OrbitMark";
 
 export default function ModeSelect() {
   const { selectMode } = useMode();
@@ -6,7 +7,9 @@ export default function ModeSelect() {
   return (
     <div className="center-screen">
       <div className="card" style={{ width: "100%", maxWidth: 400, textAlign: "center" }}>
-        <div style={{ fontSize: 48, marginBottom: 8 }}>🌸</div>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
+          <OrbitMark size={56} />
+        </div>
         <h1 style={{ margin: "0 0 4px" }}>Wenn</h1>
         <p style={{ color: "var(--md-sys-color-on-surface-variant)", marginTop: 0, marginBottom: 20 }}>
           Comment veux-tu utiliser l'app ?
