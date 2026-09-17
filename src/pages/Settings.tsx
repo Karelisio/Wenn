@@ -40,17 +40,9 @@ function AppearanceCard({
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (Capacitor.getPlatform() === "android") {
-    return (
-      <div className="card" style={{ marginBottom: 16 }}>
-        <h3 className="section-title">Apparence — Material You</h3>
-        <p style={{ marginTop: 0, marginBottom: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
-          Les couleurs de l'app s'adaptent automatiquement à ton fond d'écran, comme le reste du
-          téléphone.
-        </p>
-      </div>
-    );
-  }
+  // Sur Android, le thème suit déjà le fond d'écran nativement : cette carte
+  // n'aurait rien d'actionnable à proposer.
+  if (Capacitor.getPlatform() === "android") return null;
 
   return (
     <div className="card" style={{ marginBottom: 16 }}>
@@ -281,7 +273,7 @@ function UpdateCard() {
 
 function DuoSettings() {
   const { user, profile, signOut, refreshProfile } = useAuth();
-  const { couple, role, leaveCouple } = useCouple();
+  const { couple, role, otherPartyEmail, leaveCouple } = useCouple();
   const { cycleDays, averageCycleLength, averagePeriodLength, canEdit, upsertCycleDay } = useCycleData();
   const { isDark } = useThemeMode();
   const [uploading, setUploading] = useState(false);
@@ -401,23 +393,40 @@ function DuoSettings() {
         <p style={{ marginTop: 0 }}>
           {couple?.name} — {role === "owner" ? "tu es la titulaire" : "tu as un accès partenaire (lecture)"}
         </p>
-        {role === "owner" && (
+
+        {(role === "partner" || (role === "owner" && couple?.partner_id)) && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              background: "var(--md-sys-color-secondary-container)",
+              color: "var(--md-sys-color-on-secondary-container)",
+              borderRadius: "var(--radius-m)",
+              padding: "10px 14px",
+              fontSize: 13,
+              fontWeight: 600,
+              marginBottom: 12,
+            }}
+          >
+            🔗 Connecté·e avec {otherPartyEmail ?? (role === "partner" ? "la titulaire" : "ton/ta partenaire")}
+            {" — synchronisation active"}
+          </div>
+        )}
+
+        {role === "owner" && !couple?.partner_id && (
           <>
             <p style={{ fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
-              {couple?.partner_id
-                ? "Un·e partenaire est lié·e à ton cycle."
-                : "Partage ce code pour lier ton/ta partenaire :"}
+              Partage ce code pour lier ton/ta partenaire :
             </p>
-            {!couple?.partner_id && (
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <code className="chip" style={{ fontSize: 16, letterSpacing: 2 }}>
-                  {couple?.invite_code}
-                </code>
-                <button className="btn btn-text" onClick={copyInviteCode}>
-                  {copied ? "Copié !" : "Copier"}
-                </button>
-              </div>
-            )}
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <code className="chip" style={{ fontSize: 16, letterSpacing: 2 }}>
+                {couple?.invite_code}
+              </code>
+              <button className="btn btn-text" onClick={copyInviteCode}>
+                {copied ? "Copié !" : "Copier"}
+              </button>
+            </div>
           </>
         )}
         <button className="btn btn-text" onClick={handleLeaveCouple} disabled={leaving} style={{ marginTop: 12, color: "var(--md-sys-color-error)" }}>

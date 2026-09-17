@@ -8,6 +8,7 @@ import type { Couple, CycleDay, FlowIntensity, PartnerNote } from "../types";
 interface CoupleContextValue {
   couple: Couple | null;
   role: "owner" | "partner" | null;
+  otherPartyEmail: string | null;
   cycleDays: CycleDay[];
   partnerNotes: PartnerNote[];
   loading: boolean;
@@ -27,6 +28,7 @@ const CoupleContext = createContext<CoupleContextValue | undefined>(undefined);
 export function CoupleProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [couple, setCouple] = useState<Couple | null>(null);
+  const [otherPartyEmail, setOtherPartyEmail] = useState<string | null>(null);
   const [cycleDays, setCycleDays] = useState<CycleDay[]>([]);
   const [partnerNotes, setPartnerNotes] = useState<PartnerNote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,6 +112,32 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
     };
   }, [couple?.id]);
 
+  // Email de l'autre personne du couple, pour afficher clairement l'état de
+  // la synchronisation dans Réglages ("connecté·e avec ...").
+  useEffect(() => {
+    if (!user || !couple) {
+      setOtherPartyEmail(null);
+      return;
+    }
+    const otherId = couple.owner_id === user.id ? couple.partner_id : couple.owner_id;
+    if (!otherId) {
+      setOtherPartyEmail(null);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from("profiles")
+      .select("email")
+      .eq("id", otherId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled) setOtherPartyEmail((data as { email: string | null } | null)?.email ?? null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, couple]);
+
   // Filet de sécurité : mirroir local silencieux des données de cycle, indépendant
   // du lien avec un·e partenaire (protège contre la perte d'accès au compte/à l'app).
   useEffect(() => {
@@ -188,6 +216,7 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
       value={{
         couple,
         role,
+        otherPartyEmail,
         cycleDays,
         partnerNotes,
         loading,

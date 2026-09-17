@@ -40,7 +40,7 @@ body,
 
 body {
   margin: 0;
-  background: linear-gradient(180deg, var(--md-sys-color-primary-container) 0%, var(--md-sys-color-background) 320px);
+  background: var(--md-sys-color-background);
   color: var(--md-sys-color-on-background);
   transition: background-color 0.4s ease, color 0.4s ease;
   -webkit-tap-highlight-color: transparent;
@@ -68,6 +68,10 @@ button, input, textarea, select {
   flex: 1;
   padding: 20px 20px 96px;
   overflow-y: auto;
+  /* Le dégradé fait partie du fond de la zone qui défile (pas de body, qui
+     reste fixe derrière) : il défile avec le contenu au lieu de créer une
+     ligne de coupure visible à une hauteur fixe de l'écran. */
+  background: linear-gradient(180deg, var(--md-sys-color-primary-container) 0%, var(--md-sys-color-background) 320px);
 }
 
 .card {
@@ -193,6 +197,7 @@ button, input, textarea, select {
   align-items: center;
   justify-content: center;
   padding: 24px;
+  background: linear-gradient(180deg, var(--md-sys-color-primary-container) 0%, var(--md-sys-color-background) 320px);
 }
 
 @media (prefers-color-scheme: dark) {

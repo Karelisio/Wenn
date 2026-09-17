@@ -4,6 +4,12 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 → Mises à jour) au moment de chaque mise à jour.
 
 ## Non publié
+- Réglages affiche désormais clairement l'état de la synchronisation Duo
+  ("🔗 Connecté·e avec ...") avec l'adresse e-mail de l'autre personne.
+- Suppression de la carte "Apparence — Material You" sur Android (le thème
+  suit déjà le fond d'écran, elle n'avait plus d'utilité).
+- Correction d'un défaut visuel : une ligne de coupure de couleur apparaissait
+  en scrollant dans Réglages.
 
 ## v1.0.3 — 2026-09-17
 - Les mises à jour se téléchargent et s'installent directement depuis l'app
