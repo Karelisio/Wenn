@@ -128,6 +128,19 @@ function BackupCard({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExport() {
+    setExporting(true);
+    setStatus(null);
+    try {
+      await exportCycleDaysAsFile(cycleDays, coupleName);
+    } catch {
+      setStatus("Échec de l'export");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   async function handleFile(file: File) {
     setRestoring(true);
@@ -151,19 +164,15 @@ function BackupCard({
         téléphone ou de perte d'accès au compte.
       </p>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button
-          className="btn btn-secondary"
-          onClick={() => exportCycleDaysAsFile(cycleDays, coupleName)}
-          disabled={cycleDays.length === 0}
-        >
-          Exporter mes données
+        <button className="btn btn-secondary" onClick={handleExport} disabled={cycleDays.length === 0 || exporting}>
+          {exporting ? "Export..." : "Exporter mes données"}
         </button>
         {canRestore && (
           <>
             <input
               ref={fileInputRef}
               type="file"
-              accept="application/json"
+              accept="application/json,.json"
               hidden
               onChange={(e) => {
                 const file = e.target.files?.[0];

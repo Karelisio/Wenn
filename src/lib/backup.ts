@@ -1,3 +1,6 @@
+import { Capacitor } from "@capacitor/core";
+import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
+import { Share } from "@capacitor/share";
 import type { Couple, CycleDay, FlowIntensity, PartnerNote } from "../types";
 
 export interface BackupEntry {
@@ -17,7 +20,18 @@ interface BackupFile {
   cycleDays: BackupEntry[];
 }
 
-export function exportCycleDaysAsFile(cycleDays: CycleDay[], coupleName: string): void {
+/**
+ * Exporte les données de cycle en JSON.
+ *
+ * Sur le web, le déclenchement `<a download>` + URL de blob fonctionne
+ * normalement. Mais dans la WebView Capacitor Android, cet attribut
+ * `download` est ignoré par le système : le clic ne fait rien, sans la
+ * moindre erreur visible ("l'export ne marche pas"). Sur natif, on écrit
+ * donc le fichier via `@capacitor/filesystem` puis on ouvre la feuille de
+ * partage système (`@capacitor/share`) pour que l'utilisatrice choisisse où
+ * l'enregistrer (Drive, Fichiers, message...).
+ */
+export async function exportCycleDaysAsFile(cycleDays: CycleDay[], coupleName: string): Promise<void> {
   const payload: BackupFile = {
     app: "wenn",
     version: 1,
@@ -32,12 +46,21 @@ export function exportCycleDaysAsFile(cycleDays: CycleDay[], coupleName: string)
       note: d.note,
     })),
   };
+  const filename = `wenn-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`;
+  const json = JSON.stringify(payload, null, 2);
 
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  if (Capacitor.isNativePlatform()) {
+    await Filesystem.writeFile({ path: filename, directory: Directory.Cache, data: json, encoding: Encoding.UTF8 });
+    const { uri } = await Filesystem.getUri({ path: filename, directory: Directory.Cache });
+    await Share.share({ title: "Sauvegarde Wenn", url: uri });
+    return;
+  }
+
+  const blob = new Blob([json], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `wenn-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   a.remove();

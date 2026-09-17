@@ -9,6 +9,11 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
   s'affiche automatiquement sans réseau (au lieu de rester bloqué sur
   "Chargement..."), et les modifications faites hors ligne sont mises en
   attente puis envoyées automatiquement dès le retour de la connexion.
+- Correctif export (Réglages → Sauvegarde) : le bouton ne faisait rien sur
+  Android (le téléchargement web ne fonctionne pas dans l'app). Il ouvre
+  maintenant le partage natif pour enregistrer le fichier où tu veux. La
+  restauration accepte aussi les fichiers .json que le picker Android
+  détectait mal.
 
 ## v1.0.13 — 2026-09-17
 

@@ -17,6 +17,7 @@
     "@capacitor/filesystem": "^7.1.8",
     "@capacitor/ios": "^7.2.0",
     "@capacitor/local-notifications": "^7.0.1",
+    "@capacitor/share": "^7.0.4",
     "@material/material-color-utilities": "^0.3.0",
     "@supabase/supabase-js": "^2.45.4",
     "date-fns": "^3.6.0",
