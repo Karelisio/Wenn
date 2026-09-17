@@ -4,6 +4,9 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 → Mises à jour) au moment de chaque mise à jour.
 
 ## Non publié
+
+## v1.0.5 — 2026-09-17
+
 - Calendrier : meilleur contraste entre règles, prédiction et fenêtre
   fertile (les couleurs se confondaient trop pour bien les distinguer).
 - Réglages > Couple lié permet maintenant de renommer l'espace partagé
