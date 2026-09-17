@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useMode } from "../context/ModeContext";
 
 export default function Login() {
   const { signInWithMagicLink } = useAuth();
+  const { resetMode } = useMode();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +22,15 @@ export default function Login() {
 
   return (
     <div className="center-screen">
-      <div className="card" style={{ width: "100%", maxWidth: 380, textAlign: "center" }}>
+      <div className="card" style={{ width: "100%", maxWidth: 380, textAlign: "center", position: "relative" }}>
+        <button
+          className="btn btn-text"
+          onClick={resetMode}
+          style={{ position: "absolute", left: 4, top: 4, padding: "6px 10px" }}
+          aria-label="Retour"
+        >
+          ← Retour
+        </button>
         <div style={{ fontSize: 48, marginBottom: 8 }}>🌸</div>
         <h1 style={{ margin: "0 0 4px" }}>Wenn</h1>
         <p style={{ color: "var(--md-sys-color-on-surface-variant)", marginTop: 0 }}>

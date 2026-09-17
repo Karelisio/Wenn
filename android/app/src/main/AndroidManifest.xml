@@ -22,6 +22,20 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!--
+              App Links : le lien magique de connexion (envoyé par Supabase vers
+              https://wenn-five.vercel.app/...) s'ouvre directement dans l'app au
+              lieu du navigateur. Nécessite que
+              https://wenn-five.vercel.app/.well-known/assetlinks.json déclare
+              l'empreinte SHA256 du certificat de signature de cette app.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="wenn-five.vercel.app" />
+            </intent-filter>
+
         </activity>
 
         <provider
