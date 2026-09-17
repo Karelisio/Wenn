@@ -4,8 +4,6 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 → Mises à jour) au moment de chaque mise à jour.
 
 ## Non publié
-- Les graphiques de Tendances passent de barres à des courbes avec points
-  (régularité du cycle, flux, douleurs, comparaison), plus lisibles.
 - "Douleurs vaginales" renommé en "Douleurs" (saisie du jour, Tendances).
 - Graphiques flux/douleurs/comparaison épurés : les valeurs qui se
   chevauchaient au-dessus de chaque point sont retirées (visibles au tap sur
@@ -13,6 +11,11 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 - Nouveau widget "Orbite" au choix (en plus de celui déjà existant) : reprend
   le motif de l'icône de l'app, avec un point qui avance dans l'anneau au fil
   du cycle (comme une horloge lente) et le nombre de jours restants au centre.
+
+## v1.0.9 — 2026-09-17
+- Les graphiques de Tendances passent de barres à des courbes avec points et
+  valeurs affichées (régularité du cycle, flux, douleurs vaginales,
+  comparaison), plus lisibles.
 
 ## v1.0.8 — 2026-09-17
 - Nouveau widget d'écran d'accueil Android affichant le nombre de jours
