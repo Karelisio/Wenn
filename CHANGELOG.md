@@ -4,6 +4,9 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 → Mises à jour) au moment de chaque mise à jour.
 
 ## Non publié
+
+## v1.0.7 — 2026-09-17
+
 - Suivi de l'intensité des douleurs vaginales, des sécrétions, des rapports
   sexuels et des autres douleurs (nouveaux symptômes, comme les existants).
 - Le calendrier affiche désormais des emoji résumant ce qui a été enregistré
