@@ -5,6 +5,8 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 
 ## Non publié
 
+## v1.0.13 — 2026-09-17
+
 - Titre manquant ajouté au graphique de longueur de cycle (Tendances).
 
 ## v1.0.12 — 2026-09-17
