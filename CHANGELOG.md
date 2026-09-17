@@ -8,6 +8,8 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
   ("le téléchargement a échoué") : le fichier est servi par un stockage
   tiers qui bloque les requêtes directes depuis l'app, contournée en
   passant par le réseau natif au lieu du navigateur intégré.
+
+## v1.0.5 — 2026-09-17
 - Calendrier : meilleur contraste entre règles, prédiction et fenêtre
   fertile (les couleurs se confondaient trop pour bien les distinguer).
 - Réglages > Couple lié permet maintenant de renommer l'espace partagé
