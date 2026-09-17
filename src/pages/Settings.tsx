@@ -186,7 +186,6 @@ function UpdateCard() {
   const [result, setResult] = useState<UpdateCheckResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
-  const [progress, setProgress] = useState<number | null>(null);
 
   if (!Capacitor.isNativePlatform()) return null;
 
@@ -212,9 +211,8 @@ function UpdateCard() {
     }
 
     setDownloading(true);
-    setProgress(null);
     try {
-      await downloadAndInstallUpdate(result.downloadUrl, setProgress);
+      await downloadAndInstallUpdate(result.downloadUrl);
     } catch {
       setError("Le téléchargement de la mise à jour a échoué.");
     } finally {
@@ -255,11 +253,7 @@ function UpdateCard() {
             </div>
           )}
           <button className="btn btn-primary" onClick={handleInstall} disabled={downloading}>
-            {downloading
-              ? progress != null
-                ? `Téléchargement... ${progress}%`
-                : "Téléchargement..."
-              : `Installer la version ${result.latestVersion}`}
+            {downloading ? "Téléchargement en cours..." : `Installer la version ${result.latestVersion}`}
           </button>
         </>
       )}

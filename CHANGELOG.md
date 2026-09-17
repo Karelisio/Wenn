@@ -4,6 +4,10 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 → Mises à jour) au moment de chaque mise à jour.
 
 ## Non publié
+- Correction du bouton "Installer la version..." qui échouait toujours
+  ("le téléchargement a échoué") : le fichier est servi par un stockage
+  tiers qui bloque les requêtes directes depuis l'app, contournée en
+  passant par le réseau natif au lieu du navigateur intégré.
 - Calendrier : meilleur contraste entre règles, prédiction et fenêtre
   fertile (les couleurs se confondaient trop pour bien les distinguer).
 - Réglages > Couple lié permet maintenant de renommer l'espace partagé

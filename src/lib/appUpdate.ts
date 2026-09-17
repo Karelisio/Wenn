@@ -1,5 +1,5 @@
 import { App } from "@capacitor/app";
-import { Capacitor, registerPlugin } from "@capacitor/core";
+import { Capacitor, CapacitorHttp, registerPlugin } from "@capacitor/core";
 import { Filesystem, Directory } from "@capacitor/filesystem";
 
 const REPO = "Karelisio/Wenn";
@@ -79,49 +79,31 @@ export async function openUpdateDownload(url: string): Promise<void> {
 
 const UPDATE_APK_FILENAME = "wenn-update.apk";
 
-function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      resolve(result.substring(result.indexOf(",") + 1));
-    };
-    reader.onerror = () => reject(reader.error ?? new Error("Lecture du fichier impossible"));
-    reader.readAsDataURL(blob);
-  });
-}
-
 /**
  * Télécharge l'APK de mise à jour directement dans l'app (sans navigateur) et
- * lance l'installateur système Android dessus. `onProgress` reçoit un
- * pourcentage (ou `null` si la taille du fichier est inconnue).
+ * lance l'installateur système Android dessus.
+ *
+ * Le fichier est servi par GitHub via une redirection vers un stockage tiers
+ * (objects.githubusercontent.com / Azure Blob) qui ne renvoie aucun header
+ * CORS : un `fetch()` classique depuis la WebView est donc bloqué par le
+ * navigateur ("Failed to fetch"), même si la requête réseau aboutit bien.
+ * `CapacitorHttp` fait la requête côté natif (hors WebView), ce qui
+ * contourne cette restriction.
  */
-export async function downloadAndInstallUpdate(
-  url: string,
-  onProgress?: (percent: number | null) => void
-): Promise<void> {
-  const response = await fetch(url);
-  if (!response.ok || !response.body) throw new Error("Téléchargement impossible");
+export async function downloadAndInstallUpdate(url: string): Promise<void> {
+  const response = await CapacitorHttp.request({
+    method: "GET",
+    url,
+    responseType: "arraybuffer",
+    connectTimeout: 30000,
+    readTimeout: 60000,
+  });
 
-  const total = Number(response.headers.get("content-length")) || 0;
-  const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let received = 0;
-
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) {
-      chunks.push(value);
-      received += value.length;
-      onProgress?.(total ? Math.round((received / total) * 100) : null);
-    }
+  if (response.status < 200 || response.status >= 300 || !response.data) {
+    throw new Error("Téléchargement impossible");
   }
 
-  const blob = new Blob(chunks as BlobPart[], { type: "application/vnd.android.package-archive" });
-  const base64 = await blobToBase64(blob);
-
-  await Filesystem.writeFile({ path: UPDATE_APK_FILENAME, directory: Directory.Cache, data: base64 });
+  await Filesystem.writeFile({ path: UPDATE_APK_FILENAME, directory: Directory.Cache, data: response.data });
   const { uri } = await Filesystem.getUri({ path: UPDATE_APK_FILENAME, directory: Directory.Cache });
 
   await ApkInstaller.install({ path: uri.replace("file://", "") });
