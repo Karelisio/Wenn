@@ -5,6 +5,10 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 
 ## Non publié
 
+## v1.0.11 — 2026-09-17
+
+
+
 ## v1.0.10 — 2026-09-17
 
 - "Douleurs vaginales" renommé en "Douleurs" (saisie du jour, Tendances).
