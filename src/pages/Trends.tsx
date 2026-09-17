@@ -87,6 +87,7 @@ export default function Trends() {
       </div>
 
       <div className="card">
+        <h3 className="section-title">📈 Longueur du cycle</h3>
         {chartData.length === 0 ? (
           <p style={{ margin: 0 }}>
             Pas encore assez de données. Enregistre au moins deux cycles complets pour voir apparaître le
