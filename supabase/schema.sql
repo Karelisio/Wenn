@@ -168,6 +168,7 @@ create table if not exists public.cycle_days (
   couple_id uuid not null references public.couples (id) on delete cascade,
   date date not null,
   flow text check (flow in ('leger', 'moyen', 'abondant')),
+  vaginal_pain text check (vaginal_pain in ('leger', 'moyen', 'abondant')),
   symptoms text[] not null default '{}',
   mood text,
   note text,
@@ -293,3 +294,10 @@ create policy "theme-images: owner update"
 create policy "theme-images: owner delete"
   on storage.objects for delete
   using (bucket_id = 'theme-images' and auth.uid() = owner);
+
+-- ---------------------------------------------------------------------------
+-- Migration additive : suivi de l'intensité des douleurs vaginales
+-- (à exécuter une fois dans le SQL Editor si le projet existe déjà)
+-- ---------------------------------------------------------------------------
+alter table public.cycle_days
+  add column if not exists vaginal_pain text check (vaginal_pain in ('leger', 'moyen', 'abondant'));

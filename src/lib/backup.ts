@@ -3,6 +3,7 @@ import type { CycleDay, FlowIntensity } from "../types";
 export interface BackupEntry {
   date: string;
   flow: FlowIntensity | null;
+  vaginal_pain: FlowIntensity | null;
   symptoms: string[];
   mood: string | null;
   note: string | null;
@@ -25,6 +26,7 @@ export function exportCycleDaysAsFile(cycleDays: CycleDay[], coupleName: string)
     cycleDays: cycleDays.map((d) => ({
       date: d.date,
       flow: d.flow,
+      vaginal_pain: d.vaginal_pain,
       symptoms: d.symptoms,
       mood: d.mood,
       note: d.note,

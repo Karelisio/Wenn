@@ -18,7 +18,7 @@ interface CoupleContextValue {
   renameCouple: (name: string) => Promise<{ error: string | null }>;
   upsertCycleDay: (
     date: string,
-    fields: Partial<Pick<CycleDay, "flow" | "symptoms" | "mood" | "note">>
+    fields: Partial<Pick<CycleDay, "flow" | "vaginal_pain" | "symptoms" | "mood" | "note">>
   ) => Promise<{ error: string | null }>;
   addPartnerNote: (date: string, message: string) => Promise<{ error: string | null }>;
   refresh: () => Promise<void>;
@@ -191,7 +191,7 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
 
   async function upsertCycleDay(
     date: string,
-    fields: Partial<Pick<CycleDay, "flow" | "symptoms" | "mood" | "note">>
+    fields: Partial<Pick<CycleDay, "flow" | "vaginal_pain" | "symptoms" | "mood" | "note">>
   ) {
     if (!couple || !user) return { error: "Aucun cycle lié" };
     const { error } = await supabase

@@ -271,10 +271,12 @@ button, input, textarea, select {
 
 .calendar-day {
   position: relative;
-  aspect-ratio: 1;
+  aspect-ratio: 0.85;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 1px;
   border-radius: var(--radius-m);
   font-size: 13px;
   font-weight: 600;
@@ -282,6 +284,18 @@ button, input, textarea, select {
   background: transparent;
   border: none;
   color: var(--md-sys-color-on-surface);
+  padding: 2px 0;
+}
+
+.calendar-day-number {
+  line-height: 1;
+}
+
+.calendar-day-emojis {
+  font-size: 9px;
+  line-height: 1;
+  white-space: nowrap;
+  opacity: 0.95;
 }
 
 .calendar-day.outside {
@@ -310,12 +324,13 @@ button, input, textarea, select {
 .calendar-day.ovulation::after {
   content: "";
   position: absolute;
-  bottom: 3px;
-  width: 7px;
-  height: 7px;
+  top: 3px;
+  right: 5px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--md-sys-color-tertiary, #7c5635);
-  box-shadow: 0 0 0 2px var(--md-sys-color-surface);
+  box-shadow: 0 0 0 1.5px var(--md-sys-color-surface);
 }
 
 .legend {

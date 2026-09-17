@@ -4,6 +4,12 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 → Mises à jour) au moment de chaque mise à jour.
 
 ## Non publié
+- Suivi de l'intensité des douleurs vaginales, des sécrétions, des rapports
+  sexuels et des autres douleurs (nouveaux symptômes, comme les existants).
+- Le calendrier affiche désormais des emoji résumant ce qui a été enregistré
+  chaque jour (flux, douleurs, symptômes...).
+- Tendances : nouveaux graphiques flux, douleurs vaginales, et comparaison
+  des deux.
 - Correction du bouton "Installer la version..." qui échouait toujours
   ("le téléchargement a échoué") : le fichier est servi par un stockage
   tiers qui bloque les requêtes directes depuis l'app, contournée en

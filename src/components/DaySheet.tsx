@@ -2,12 +2,18 @@ import { useEffect, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useCycleData } from "../context/CycleDataContext";
-import { SYMPTOM_LABELS, SYMPTOM_OPTIONS, MOOD_OPTIONS, type FlowIntensity } from "../types";
+import { SYMPTOM_LABELS, SYMPTOM_OPTIONS, MOOD_OPTIONS, VAGINAL_PAIN_EMOJI, type FlowIntensity } from "../types";
 
 const FLOW_OPTIONS: { value: FlowIntensity; label: string; emoji: string }[] = [
   { value: "leger", label: "Léger", emoji: "🩸" },
   { value: "moyen", label: "Moyen", emoji: "🩸🩸" },
   { value: "abondant", label: "Abondant", emoji: "🩸🩸🩸" },
+];
+
+const VAGINAL_PAIN_OPTIONS: { value: FlowIntensity; label: string; emoji: string }[] = [
+  { value: "leger", label: "Légère", emoji: VAGINAL_PAIN_EMOJI },
+  { value: "moyen", label: "Moyenne", emoji: VAGINAL_PAIN_EMOJI.repeat(2) },
+  { value: "abondant", label: "Forte", emoji: VAGINAL_PAIN_EMOJI.repeat(3) },
 ];
 
 export default function DaySheet({ date, onClose }: { date: string; onClose: () => void }) {
@@ -16,6 +22,7 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
   const dayNotes = partnerNotes.filter((n) => n.date === date);
 
   const [flow, setFlow] = useState<FlowIntensity | null>(existing?.flow ?? null);
+  const [vaginalPain, setVaginalPain] = useState<FlowIntensity | null>(existing?.vaginal_pain ?? null);
   const [symptoms, setSymptoms] = useState<string[]>(existing?.symptoms ?? []);
   const [mood, setMood] = useState<string | null>(existing?.mood ?? null);
   const [note, setNote] = useState(existing?.note ?? "");
@@ -24,6 +31,7 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
 
   useEffect(() => {
     setFlow(existing?.flow ?? null);
+    setVaginalPain(existing?.vaginal_pain ?? null);
     setSymptoms(existing?.symptoms ?? []);
     setMood(existing?.mood ?? null);
     setNote(existing?.note ?? "");
@@ -35,7 +43,7 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
 
   async function handleSave() {
     setSaving(true);
-    await upsertCycleDay(date, { flow, symptoms, mood, note: note || null });
+    await upsertCycleDay(date, { flow, vaginal_pain: vaginalPain, symptoms, mood, note: note || null });
     setSaving(false);
     onClose();
   }
@@ -63,6 +71,22 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
                 className={`chip${flow === opt.value ? " selected" : ""}`}
                 disabled={!canEdit}
                 onClick={() => setFlow(flow === opt.value ? null : opt.value)}
+              >
+                {opt.emoji} {opt.label}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section style={{ marginBottom: 20 }}>
+          <h3 className="section-title">Douleurs vaginales</h3>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {VAGINAL_PAIN_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                className={`chip${vaginalPain === opt.value ? " selected" : ""}`}
+                disabled={!canEdit}
+                onClick={() => setVaginalPain(vaginalPain === opt.value ? null : opt.value)}
               >
                 {opt.emoji} {opt.label}
               </button>

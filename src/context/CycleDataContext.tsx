@@ -15,7 +15,7 @@ export interface CycleDataValue {
   loading: boolean;
   upsertCycleDay: (
     date: string,
-    fields: Partial<Pick<CycleDay, "flow" | "symptoms" | "mood" | "note">>
+    fields: Partial<Pick<CycleDay, "flow" | "vaginal_pain" | "symptoms" | "mood" | "note">>
   ) => Promise<{ error: string | null }>;
   addPartnerNote: (date: string, message: string) => Promise<{ error: string | null }>;
 }

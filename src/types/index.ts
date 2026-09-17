@@ -9,6 +9,9 @@ export const SYMPTOM_OPTIONS = [
   "acne",
   "dos_douloureux",
   "nausees",
+  "secretions",
+  "rapport_sexuel",
+  "autre_douleur",
 ] as const;
 
 export type Symptom = (typeof SYMPTOM_OPTIONS)[number];
@@ -22,7 +25,28 @@ export const SYMPTOM_LABELS: Record<Symptom, string> = {
   acne: "Acné",
   dos_douloureux: "Mal de dos",
   nausees: "Nausées",
+  secretions: "Sécrétions",
+  rapport_sexuel: "Rapport sexuel",
+  autre_douleur: "Autre douleur",
 };
+
+/** Emoji affiché sur le calendrier pour chaque symptôme enregistré. */
+export const SYMPTOM_EMOJI: Record<Symptom, string> = {
+  crampes: "😣",
+  fatigue: "🥱",
+  maux_de_tete: "🤕",
+  ballonnements: "🎈",
+  seins_sensibles: "💗",
+  acne: "🔴",
+  dos_douloureux: "🦴",
+  nausees: "🤢",
+  secretions: "💧",
+  rapport_sexuel: "❤️",
+  autre_douleur: "⚠️",
+};
+
+export const FLOW_EMOJI = "🩸";
+export const VAGINAL_PAIN_EMOJI = "🔥";
 
 export const MOOD_OPTIONS = ["😊", "😌", "😐", "😢", "😡", "🥱", "🥰", "😖"] as const;
 export type Mood = (typeof MOOD_OPTIONS)[number];
@@ -54,6 +78,7 @@ export interface CycleDay {
   couple_id: string;
   date: string; // yyyy-MM-dd
   flow: FlowIntensity | null;
+  vaginal_pain: FlowIntensity | null;
   symptoms: string[];
   mood: string | null;
   note: string | null;

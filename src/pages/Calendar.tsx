@@ -14,6 +14,7 @@ import {
 import { fr } from "date-fns/locale";
 import { useCycleData } from "../context/CycleDataContext";
 import { computeCyclePrediction, isWithinRange } from "../lib/cyclePredictions";
+import { FLOW_EMOJI, SYMPTOM_EMOJI, SYMPTOM_OPTIONS, VAGINAL_PAIN_EMOJI } from "../types";
 import DaySheet from "../components/DaySheet";
 
 const WEEKDAYS = ["L", "M", "M", "J", "V", "S", "D"];
@@ -37,6 +38,25 @@ export default function Calendar() {
   const flowByDate = useMemo(() => {
     const map = new Map<string, string>();
     for (const d of cycleDays) if (d.flow) map.set(d.date, d.flow);
+    return map;
+  }, [cycleDays]);
+
+  // Emoji résumant ce qui a été enregistré ce jour-là (flux, douleurs, symptômes...),
+  // affichés directement sur le calendrier — 3 max, plus un "+N" si besoin.
+  const emojisByDate = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const d of cycleDays) {
+      const icons: string[] = [];
+      if (d.flow) icons.push(FLOW_EMOJI);
+      if (d.vaginal_pain) icons.push(VAGINAL_PAIN_EMOJI);
+      for (const s of SYMPTOM_OPTIONS) {
+        if (d.symptoms.includes(s)) icons.push(SYMPTOM_EMOJI[s]);
+      }
+      if (icons.length === 0) continue;
+      const shown = icons.slice(0, 3);
+      const extra = icons.length - shown.length;
+      map.set(d.date, shown.join("") + (extra > 0 ? `+${extra}` : ""));
+    }
     return map;
   }, [cycleDays]);
 
@@ -116,15 +136,20 @@ export default function Calendar() {
               {w}
             </div>
           ))}
-          {days.map((date) => (
-            <button
-              key={date.toISOString()}
-              className={dayClasses(date)}
-              onClick={() => setSelectedDate(format(date, "yyyy-MM-dd"))}
-            >
-              {date.getDate()}
-            </button>
-          ))}
+          {days.map((date) => {
+            const dateStr = format(date, "yyyy-MM-dd");
+            const emojis = emojisByDate.get(dateStr);
+            return (
+              <button
+                key={date.toISOString()}
+                className={dayClasses(date)}
+                onClick={() => setSelectedDate(dateStr)}
+              >
+                <span className="calendar-day-number">{date.getDate()}</span>
+                {emojis && <span className="calendar-day-emojis">{emojis}</span>}
+              </button>
+            );
+          })}
         </div>
 
         <div className="legend">

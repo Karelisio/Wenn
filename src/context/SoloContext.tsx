@@ -57,7 +57,7 @@ export function SoloProvider({ children }: { children: ReactNode }) {
 
   async function upsertCycleDay(
     date: string,
-    fields: Partial<Pick<CycleDay, "flow" | "symptoms" | "mood" | "note">>
+    fields: Partial<Pick<CycleDay, "flow" | "vaginal_pain" | "symptoms" | "mood" | "note">>
   ) {
     setCycleDays((prev) => {
       const now = new Date().toISOString();
@@ -71,6 +71,7 @@ export function SoloProvider({ children }: { children: ReactNode }) {
           couple_id: "solo",
           date,
           flow: fields.flow ?? null,
+          vaginal_pain: fields.vaginal_pain ?? null,
           symptoms: fields.symptoms ?? [],
           mood: fields.mood ?? null,
           note: fields.note ?? null,

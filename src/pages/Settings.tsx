@@ -320,10 +320,11 @@ function DuoSettings() {
     setUploading(false);
   }
 
-  async function handleRestoreBackup(entries: { date: string; flow: import("../types").FlowIntensity | null; symptoms: string[]; mood: string | null; note: string | null }[]) {
+  async function handleRestoreBackup(entries: { date: string; flow: import("../types").FlowIntensity | null; vaginal_pain: import("../types").FlowIntensity | null; symptoms: string[]; mood: string | null; note: string | null }[]) {
     for (const entry of entries) {
       await upsertCycleDay(entry.date, {
         flow: entry.flow,
+        vaginal_pain: entry.vaginal_pain,
         symptoms: entry.symptoms,
         mood: entry.mood,
         note: entry.note,
@@ -498,10 +499,11 @@ function SoloSettings() {
     }
   }
 
-  async function handleRestoreBackup(entries: { date: string; flow: import("../types").FlowIntensity | null; symptoms: string[]; mood: string | null; note: string | null }[]) {
+  async function handleRestoreBackup(entries: { date: string; flow: import("../types").FlowIntensity | null; vaginal_pain: import("../types").FlowIntensity | null; symptoms: string[]; mood: string | null; note: string | null }[]) {
     for (const entry of entries) {
       await upsertCycleDay(entry.date, {
         flow: entry.flow,
+        vaginal_pain: entry.vaginal_pain,
         symptoms: entry.symptoms,
         mood: entry.mood,
         note: entry.note,
