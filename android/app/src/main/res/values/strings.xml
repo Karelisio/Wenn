@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Wenn</string>
+    <string name="title_activity_main">Wenn</string>
+    <string name="package_name">io.karelisio.wenn</string>
+    <string name="custom_url_scheme">io.karelisio.wenn</string>
+</resources>
