@@ -9,6 +9,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.os.Bundle;
 import android.util.TypedValue;
 import android.widget.RemoteViews;
 
@@ -35,6 +36,11 @@ public class WennOrbitWidgetProvider extends AppWidgetProvider {
         }
     }
 
+    @Override
+    public void onAppWidgetOptionsChanged(Context context, AppWidgetManager appWidgetManager, int appWidgetId, Bundle newOptions) {
+        updateWidget(context, appWidgetManager, appWidgetId);
+    }
+
     static void updateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
         SharedPreferences prefs = context.getSharedPreferences(WennWidgetProvider.PREFS_NAME, Context.MODE_PRIVATE);
         boolean hasData = prefs.getBoolean(WennWidgetProvider.KEY_HAS_DATA, false);
@@ -42,19 +48,28 @@ public class WennOrbitWidgetProvider extends AppWidgetProvider {
         float progress = prefs.getFloat(WennWidgetProvider.KEY_CYCLE_PROGRESS, 0f);
         boolean periodDay = hasData && daysRemaining <= 0;
 
+        // En dessous d'~70dp de côté, l'anneau devient trop fin pour rester lisible :
+        // on réduit alors le chiffre plutôt que de laisser le rendu se chevaucher.
+        Bundle options = appWidgetManager.getAppWidgetOptions(appWidgetId);
+        int minWidthDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0);
+        int minHeightDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0);
+        boolean compact = (minWidthDp > 0 && minWidthDp < 70) || (minHeightDp > 0 && minHeightDp < 70);
+
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_orbit);
         views.setImageViewBitmap(R.id.widget_orbit_ring, drawOrbit(progress, periodDay, hasData));
 
         if (!hasData) {
             views.setTextViewText(R.id.widget_orbit_number, "🌸");
-            views.setTextViewTextSize(R.id.widget_orbit_number, TypedValue.COMPLEX_UNIT_SP, 22);
+            views.setTextViewTextSize(R.id.widget_orbit_number, TypedValue.COMPLEX_UNIT_SP, compact ? 16 : 22);
         } else if (periodDay) {
             views.setTextViewText(R.id.widget_orbit_number, "🩸");
-            views.setTextViewTextSize(R.id.widget_orbit_number, TypedValue.COMPLEX_UNIT_SP, 22);
+            views.setTextViewTextSize(R.id.widget_orbit_number, TypedValue.COMPLEX_UNIT_SP, compact ? 16 : 22);
         } else {
             views.setTextViewText(R.id.widget_orbit_number, String.valueOf(daysRemaining));
-            views.setTextViewTextSize(R.id.widget_orbit_number, TypedValue.COMPLEX_UNIT_SP, 26);
+            views.setTextViewTextSize(R.id.widget_orbit_number, TypedValue.COMPLEX_UNIT_SP, compact ? 18 : 26);
         }
+
+        views.setOnClickPendingIntent(R.id.widget_orbit_root, WennWidgetProvider.openAppIntent(context, appWidgetId));
 
         appWidgetManager.updateAppWidget(appWidgetId, views);
     }
