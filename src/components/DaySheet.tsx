@@ -79,7 +79,7 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
         </section>
 
         <section style={{ marginBottom: 20 }}>
-          <h3 className="section-title">Douleurs vaginales</h3>
+          <h3 className="section-title">Douleurs</h3>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {VAGINAL_PAIN_OPTIONS.map((opt) => (
               <button

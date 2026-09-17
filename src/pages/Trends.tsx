@@ -175,10 +175,10 @@ export default function Trends() {
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>
-        <h3 className="section-title">🔥 Douleurs vaginales</h3>
+        <h3 className="section-title">🔥 Douleurs</h3>
         {intensityData.filter((d) => (d.douleur ?? 0) > 0).length === 0 ? (
           <p style={{ margin: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
-            Pas encore de douleur vaginale enregistrée.
+            Pas encore de douleur enregistrée.
           </p>
         ) : (
           <ResponsiveContainer width="100%" height={210}>
@@ -200,7 +200,7 @@ export default function Trends() {
                   background: "var(--md-sys-color-surface)",
                   color: "var(--md-sys-color-on-surface)",
                 }}
-                formatter={(value: number) => [intensityTickFormatter(value) || "—", "Douleur vaginale"]}
+                formatter={(value: number) => [intensityTickFormatter(value) || "—", "Douleur"]}
               />
               <Line
                 type="monotone"
@@ -217,7 +217,7 @@ export default function Trends() {
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>
-        <h3 className="section-title">Comparaison flux / douleurs vaginales</h3>
+        <h3 className="section-title">Comparaison flux / douleurs</h3>
         {intensityData.length === 0 ? (
           <p style={{ margin: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
             Pas encore assez de données pour comparer.
@@ -258,7 +258,7 @@ export default function Trends() {
               <Line
                 type="monotone"
                 dataKey="douleur"
-                name="Douleur vaginale"
+                name="Douleur"
                 stroke="var(--md-sys-color-tertiary, #7c5635)"
                 strokeWidth={2.5}
                 dot={{ r: 4, fill: "var(--md-sys-color-tertiary, #7c5635)", strokeWidth: 0 }}

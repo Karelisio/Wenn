@@ -5,7 +5,8 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 
 ## Non publié
 - Les graphiques de Tendances passent de barres à des courbes avec points
-  (régularité du cycle, flux, douleurs vaginales, comparaison), plus lisibles.
+  (régularité du cycle, flux, douleurs, comparaison), plus lisibles.
+- "Douleurs vaginales" renommé en "Douleurs" (saisie du jour, Tendances).
 - Graphiques flux/douleurs/comparaison épurés : les valeurs qui se
   chevauchaient au-dessus de chaque point sont retirées (visibles au tap sur
   un point) et seuls les 14 derniers jours renseignés sont affichés.
