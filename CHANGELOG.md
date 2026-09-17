@@ -4,6 +4,9 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 → Mises à jour) au moment de chaque mise à jour.
 
 ## Non publié
+
+## v1.0.6 — 2026-09-17
+
 - Correction du bouton "Installer la version..." qui échouait toujours
   ("le téléchargement a échoué") : le fichier est servi par un stockage
   tiers qui bloque les requêtes directes depuis l'app, contournée en
