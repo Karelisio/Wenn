@@ -131,13 +131,13 @@ manuellement (`workflow_dispatch`). Il :
 L'APK étant toujours signé avec la **même clé**, il peut être installé par-dessus
 une version précédente sans désinstallation, sur les deux téléphones.
 
-**Versioning & mise à jour in-app.** Le workflow tamponne automatiquement le
-`versionCode`/`versionName` Android à partir du numéro de run et, pour un tag `v*`,
-du tag lui-même (ex. `v1.2.0` → version `1.2.0`). Le bouton **Réglages → Mises à
-jour** compare la version installée à la dernière Release GitHub publiée et ouvre le
-téléchargement de l'APK dans le navigateur si une mise à jour existe. Pour que ce
-bouton détecte une nouvelle version, il faut donc **taguer** la release (pas juste
-pousser sur `main`) :
+**Versioning & mise à jour in-app.** Chaque push sur `main` crée et pousse
+automatiquement le tag `v*` suivant (patch +1 depuis le dernier tag existant —
+`v1.0.0`, `v1.0.1`, ...), ce qui déclenche une Release GitHub avec l'APK signé
+attaché. Aucune action manuelle n'est nécessaire : le bouton **Réglages → Mises à
+jour** compare la version installée à la dernière Release publiée et propose le
+téléchargement si elle diffère. Pour un vrai bump majeur/mineur (ex. `v2.0.0`),
+pousse le tag toi-même — les auto-tags suivants repartiront de lui :
 
 ```bash
 git tag vX.Y.Z

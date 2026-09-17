@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -104,6 +106,29 @@ jobs:
           name: wenn-release-apk
           path: wenn-release.apk
           retention-days: 30
+
+      # Sur un simple push sur main (pas un tag), crée et pousse automatiquement
+      # le tag de release suivant (v1.0.0, v1.0.1, ...), en repartant du dernier
+      # tag "v*" existant. Ce push de tag redéclenche ce workflow avec
+      # github.ref = refs/tags/vX.Y.Z, qui rebuild et publie la Release
+      # (étape "Publish GitHub Release" ci-dessous). Un tag poussé manuellement
+      # (ex. pour un vrai bump majeur/mineur) est respecté : les prochains
+      # auto-tags repartent de lui.
+      - name: Auto-tag this build for release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          LATEST_TAG=$(git tag --list "v*" --sort=-v:refname | head -n1)
+          if [ -z "$LATEST_TAG" ]; then
+            NEXT_TAG="v1.0.0"
+          else
+            IFS='.' read -r MAJOR MINOR PATCH <<< "${LATEST_TAG#v}"
+            NEXT_TAG="v${MAJOR}.${MINOR}.$((PATCH + 1))"
+          fi
+          echo "Prochain tag : $NEXT_TAG"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "$NEXT_TAG"
+          git push origin "$NEXT_TAG"
 
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
