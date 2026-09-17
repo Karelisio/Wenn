@@ -243,13 +243,33 @@ function UpdateCard() {
           {checking ? "Vérification..." : "Vérifier les mises à jour"}
         </button>
       ) : (
-        <button className="btn btn-primary" onClick={handleInstall} disabled={downloading}>
-          {downloading
-            ? progress != null
-              ? `Téléchargement... ${progress}%`
-              : "Téléchargement..."
-            : `Installer la version ${result.latestVersion}`}
-        </button>
+        <>
+          {result.releaseNotes && (
+            <div
+              style={{
+                background: "var(--md-sys-color-surface-variant)",
+                color: "var(--md-sys-color-on-surface-variant)",
+                borderRadius: "var(--radius-m)",
+                padding: 12,
+                marginBottom: 12,
+                fontSize: 13,
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              <strong style={{ display: "block", marginBottom: 4, color: "var(--md-sys-color-on-surface)" }}>
+                Nouveautés de la version {result.latestVersion}
+              </strong>
+              {result.releaseNotes}
+            </div>
+          )}
+          <button className="btn btn-primary" onClick={handleInstall} disabled={downloading}>
+            {downloading
+              ? progress != null
+                ? `Téléchargement... ${progress}%`
+                : "Téléchargement..."
+              : `Installer la version ${result.latestVersion}`}
+          </button>
+        </>
       )}
       {result && !result.updateAvailable && result.currentVersion && (
         <p style={{ fontSize: 13, marginTop: 10 }}>Tu as déjà la dernière version ✅</p>

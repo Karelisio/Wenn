@@ -67,6 +67,51 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "Tag de release : $TAG"
 
+      # Extrait la section "## Non publié" de CHANGELOG.md pour l'utiliser
+      # comme texte de la Release GitHub (lu ensuite dans l'app côté
+      # Réglages > Mises à jour), puis l'archive sous le tag publié.
+      - name: Extraire les notes de version depuis CHANGELOG.md
+        id: changelog
+        if: steps.release_tag.outputs.tag != ''
+        env:
+          RELEASE_TAG: ${{ steps.release_tag.outputs.tag }}
+        run: |
+          node - <<'NODE'
+          const fs = require("fs");
+          const tag = process.env.RELEASE_TAG;
+          const path = "CHANGELOG.md";
+          const content = fs.readFileSync(path, "utf8");
+          const marker = "## Non publié";
+          const idx = content.indexOf(marker);
+
+          if (idx === -1) {
+            fs.writeFileSync("release_notes.md", "Mise à jour.\n");
+            process.exit(0);
+          }
+
+          const rest = content.slice(idx + marker.length);
+          const nextHeadingIdx = rest.search(/\n## /);
+          const sectionBody = (nextHeadingIdx === -1 ? rest : rest.slice(0, nextHeadingIdx)).trim();
+          const notes = sectionBody.length > 0 ? sectionBody : "Corrections et améliorations diverses.";
+          fs.writeFileSync("release_notes.md", notes + "\n");
+
+          const date = new Date().toISOString().slice(0, 10);
+          const archived = `## Non publié\n\n## ${tag} — ${date}\n\n${sectionBody}\n`;
+          const updated = content.slice(0, idx) + archived + (nextHeadingIdx === -1 ? "" : rest.slice(nextHeadingIdx));
+          fs.writeFileSync(path, updated);
+          NODE
+
+      - name: Committer le changelog versionné
+        if: steps.release_tag.outputs.tag != '' && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          if ! git diff --cached --quiet; then
+            git commit -m "Changelog : ${{ steps.release_tag.outputs.tag }}"
+            git push origin HEAD:main
+          fi
+
       - name: Stamp app version
         working-directory: android
         run: |
@@ -140,4 +185,4 @@ jobs:
         with:
           tag_name: ${{ steps.release_tag.outputs.tag }}
           files: wenn-release.apk
-          generate_release_notes: true
+          body_path: release_notes.md

@@ -16,6 +16,7 @@ export interface UpdateCheckResult {
   latestVersion: string | null;
   downloadUrl: string | null;
   releaseUrl: string | null;
+  releaseNotes: string | null;
 }
 
 interface GithubReleaseAsset {
@@ -26,6 +27,7 @@ interface GithubReleaseAsset {
 interface GithubRelease {
   tag_name: string;
   html_url: string;
+  body?: string;
   assets: GithubReleaseAsset[];
 }
 
@@ -40,6 +42,7 @@ export async function checkForUpdate(): Promise<UpdateCheckResult> {
     latestVersion: null,
     downloadUrl: null,
     releaseUrl: null,
+    releaseNotes: null,
   };
 
   if (!Capacitor.isNativePlatform()) return empty;
@@ -61,6 +64,7 @@ export async function checkForUpdate(): Promise<UpdateCheckResult> {
     latestVersion: latestVersion || null,
     downloadUrl: apkAsset?.browser_download_url ?? null,
     releaseUrl: release.html_url ?? null,
+    releaseNotes: release.body?.trim() || null,
   };
 }
 
