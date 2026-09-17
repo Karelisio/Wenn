@@ -4,6 +4,9 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 → Mises à jour) au moment de chaque mise à jour.
 
 ## Non publié
+
+## v1.0.10 — 2026-09-17
+
 - "Douleurs vaginales" renommé en "Douleurs" (saisie du jour, Tendances).
 - Graphiques flux/douleurs/comparaison épurés : les valeurs qui se
   chevauchaient au-dessus de chaque point sont retirées (visibles au tap sur
