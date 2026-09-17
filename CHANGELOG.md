@@ -4,6 +4,8 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 → Mises à jour) au moment de chaque mise à jour.
 
 ## Non publié
+- Nouveau widget d'écran d'accueil Android affichant le nombre de jours
+  restants avant les prochaines règles.
 - Suivi de l'intensité des douleurs vaginales, des sécrétions, des rapports
   sexuels et des autres douleurs (nouveaux symptômes, comme les existants).
 - Le calendrier affiche désormais des emoji résumant ce qui a été enregistré

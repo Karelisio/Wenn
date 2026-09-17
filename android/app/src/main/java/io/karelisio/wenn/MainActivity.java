@@ -9,6 +9,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(WallpaperColorPlugin.class);
         registerPlugin(ApkInstallerPlugin.class);
+        registerPlugin(WidgetDataPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }
