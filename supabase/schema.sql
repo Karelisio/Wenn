@@ -22,6 +22,24 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default now()
 );
 
+-- ---------------------------------------------------------------------------
+-- couples : lie deux comptes (titulaire du cycle + partenaire)
+-- Créée avant les policies de "profiles" car celles-ci la référencent.
+-- ---------------------------------------------------------------------------
+create table if not exists public.couples (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users (id) on delete cascade,
+  partner_id uuid references auth.users (id) on delete set null,
+  invite_code text not null unique default substr(replace(gen_random_uuid()::text, '-', ''), 1, 8),
+  name text not null default 'Notre cycle',
+  average_cycle_length smallint not null default 28,
+  average_period_length smallint not null default 5,
+  created_at timestamptz not null default now()
+);
+
+-- ---------------------------------------------------------------------------
+-- profiles : policies (peuvent maintenant référencer public.couples)
+-- ---------------------------------------------------------------------------
 alter table public.profiles enable row level security;
 
 create policy "profiles: select own"
@@ -66,19 +84,8 @@ create trigger on_auth_user_created
   for each row execute procedure public.handle_new_user();
 
 -- ---------------------------------------------------------------------------
--- couples : lie deux comptes (titulaire du cycle + partenaire)
+-- couples : policies + fonction de liaison par code d'invitation
 -- ---------------------------------------------------------------------------
-create table if not exists public.couples (
-  id uuid primary key default gen_random_uuid(),
-  owner_id uuid not null references auth.users (id) on delete cascade,
-  partner_id uuid references auth.users (id) on delete set null,
-  invite_code text not null unique default substr(replace(gen_random_uuid()::text, '-', ''), 1, 8),
-  name text not null default 'Notre cycle',
-  average_cycle_length smallint not null default 28,
-  average_period_length smallint not null default 5,
-  created_at timestamptz not null default now()
-);
-
 alter table public.couples enable row level security;
 
 create policy "couples: select member"
