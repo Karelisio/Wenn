@@ -4,6 +4,9 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 → Mises à jour) au moment de chaque mise à jour.
 
 ## Non publié
+
+## v1.0.8 — 2026-09-17
+
 - Nouveau widget d'écran d'accueil Android affichant le nombre de jours
   restants avant les prochaines règles.
 
