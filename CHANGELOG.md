@@ -16,6 +16,8 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 - Ajout d'un champ pour enregistrer une douleur spécifique, en plus de la
   liste de symptômes.
 
+## v1.0.15 — 2026-09-17
+
 ## v1.0.14 — 2026-09-17
 
 - Mode Duo utilisable hors connexion : la dernière copie enregistrée
