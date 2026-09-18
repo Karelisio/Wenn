@@ -5,6 +5,17 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 
 ## Non publié
 
+- Nouveau réglage "Taille de l'affichage" (Réglages) : texte et éléments
+  plus grands ou plus petits, propre à chaque téléphone.
+- La barre d'état (heure, batterie) est masquée dans l'app.
+- Correctif : le bouton "Activer les rappels" restait affiché comme pressé ;
+  il indique maintenant "Rappels activés ✅" et ne redevient actif que si tu
+  changes le délai.
+- Ajout du "Spotting" dans les niveaux de saignement.
+- La fleur du calendrier est remplacée par l'icône de l'app.
+- Ajout d'un champ pour enregistrer une douleur spécifique, en plus de la
+  liste de symptômes.
+
 ## v1.0.14 — 2026-09-17
 
 - Mode Duo utilisable hors connexion : la dernière copie enregistrée

@@ -52,6 +52,7 @@ export default function Calendar() {
       for (const s of SYMPTOM_OPTIONS) {
         if (d.symptoms.includes(s)) icons.push(SYMPTOM_EMOJI[s]);
       }
+      if (d.symptoms.some((s) => !(SYMPTOM_OPTIONS as readonly string[]).includes(s))) icons.push("📝");
       if (icons.length === 0) continue;
       const shown = icons.slice(0, 3);
       const extra = icons.length - shown.length;
@@ -90,7 +91,9 @@ export default function Calendar() {
   return (
     <div className="screen">
       <header style={{ marginBottom: 16 }}>
-        <h1 style={{ margin: "0 0 2px" }}>Wenn 🌸</h1>
+        <h1 style={{ margin: "0 0 2px", display: "flex", alignItems: "center", gap: 8 }}>
+          Wenn <img src="/icon.svg" alt="" width={26} height={26} />
+        </h1>
         <p style={{ margin: 0, color: "var(--md-sys-color-on-surface-variant)" }}>
           {coupleName} {role === "partner" && "· lecture"}
         </p>

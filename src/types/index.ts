@@ -1,4 +1,4 @@
-export type FlowIntensity = "leger" | "moyen" | "abondant";
+export type FlowIntensity = "spotting" | "leger" | "moyen" | "abondant";
 
 export const SYMPTOM_OPTIONS = [
   "crampes",

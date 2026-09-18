@@ -17,8 +17,8 @@ import { useCycleData } from "../context/CycleDataContext";
 import { computeCyclePrediction } from "../lib/cyclePredictions";
 import type { FlowIntensity } from "../types";
 
-const INTENSITY_VALUE: Record<FlowIntensity, number> = { leger: 1, moyen: 2, abondant: 3 };
-const INTENSITY_LABEL: Record<number, string> = { 1: "Léger", 2: "Moyen", 3: "Fort" };
+const INTENSITY_VALUE: Record<FlowIntensity, number> = { spotting: 0.5, leger: 1, moyen: 2, abondant: 3 };
+const INTENSITY_LABEL: Record<number, string> = { 0.5: "Spotting", 1: "Léger", 2: "Moyen", 3: "Fort" };
 
 function intensityTickFormatter(value: number | null | undefined): string {
   return value != null ? (INTENSITY_LABEL[value] ?? "") : "";

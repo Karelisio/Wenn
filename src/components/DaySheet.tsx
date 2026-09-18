@@ -5,6 +5,7 @@ import { useCycleData } from "../context/CycleDataContext";
 import { SYMPTOM_LABELS, SYMPTOM_OPTIONS, MOOD_OPTIONS, VAGINAL_PAIN_EMOJI, type FlowIntensity } from "../types";
 
 const FLOW_OPTIONS: { value: FlowIntensity; label: string; emoji: string }[] = [
+  { value: "spotting", label: "Spotting", emoji: "🟤" },
   { value: "leger", label: "Léger", emoji: "🩸" },
   { value: "moyen", label: "Moyen", emoji: "🩸🩸" },
   { value: "abondant", label: "Abondant", emoji: "🩸🩸🩸" },
@@ -27,6 +28,7 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
   const [mood, setMood] = useState<string | null>(existing?.mood ?? null);
   const [note, setNote] = useState(existing?.note ?? "");
   const [newPartnerNote, setNewPartnerNote] = useState("");
+  const [customSymptom, setCustomSymptom] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -40,6 +42,15 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
   function toggleSymptom(s: string) {
     setSymptoms((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
   }
+
+  function addCustomSymptom() {
+    const trimmed = customSymptom.trim();
+    if (!trimmed || symptoms.includes(trimmed)) return;
+    setSymptoms((prev) => [...prev, trimmed]);
+    setCustomSymptom("");
+  }
+
+  const customSymptoms = symptoms.filter((s) => !(SYMPTOM_OPTIONS as readonly string[]).includes(s));
 
   async function handleSave() {
     setSaving(true);
@@ -124,7 +135,31 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
                 {SYMPTOM_LABELS[s]}
               </button>
             ))}
+            {customSymptoms.map((s) => (
+              <button key={s} className="chip selected" disabled={!canEdit} onClick={() => toggleSymptom(s)}>
+                {s} ✕
+              </button>
+            ))}
           </div>
+          {canEdit && (
+            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+              <input
+                className="input"
+                placeholder="Douleur spécifique (ex: migraine, sciatique...)"
+                value={customSymptom}
+                onChange={(e) => setCustomSymptom(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addCustomSymptom();
+                  }
+                }}
+              />
+              <button className="btn btn-secondary" onClick={addCustomSymptom} disabled={!customSymptom.trim()}>
+                Ajouter
+              </button>
+            </div>
+          )}
         </section>
 
         <section style={{ marginBottom: 20 }}>

@@ -167,7 +167,7 @@ create table if not exists public.cycle_days (
   id uuid primary key default gen_random_uuid(),
   couple_id uuid not null references public.couples (id) on delete cascade,
   date date not null,
-  flow text check (flow in ('leger', 'moyen', 'abondant')),
+  flow text check (flow in ('spotting', 'leger', 'moyen', 'abondant')),
   vaginal_pain text check (vaginal_pain in ('leger', 'moyen', 'abondant')),
   symptoms text[] not null default '{}',
   mood text,
@@ -301,3 +301,12 @@ create policy "theme-images: owner delete"
 -- ---------------------------------------------------------------------------
 alter table public.cycle_days
   add column if not exists vaginal_pain text check (vaginal_pain in ('leger', 'moyen', 'abondant'));
+
+-- ---------------------------------------------------------------------------
+-- Migration additive : ajout du spotting dans les niveaux de flux
+-- (à exécuter une fois dans le SQL Editor si le projet existe déjà)
+-- ---------------------------------------------------------------------------
+alter table public.cycle_days
+  drop constraint if exists cycle_days_flow_check;
+alter table public.cycle_days
+  add constraint cycle_days_flow_check check (flow in ('spotting', 'leger', 'moyen', 'abondant'));

@@ -5,6 +5,7 @@ import { useSoloProfile } from "../context/SoloContext";
 import { useCycleData } from "../context/CycleDataContext";
 import { useMode } from "../context/ModeContext";
 import { useThemeMode } from "../context/ThemeModeContext";
+import { useUiScale, UI_SCALE_OPTIONS } from "../context/UiScaleContext";
 import { supabase } from "../lib/supabase";
 import { applyThemeFromImageUrl } from "../lib/materialYou";
 import { resizeImageToDataUrl } from "../lib/localStore";
@@ -75,6 +76,30 @@ function AppearanceCard({
   );
 }
 
+function UiScaleCard() {
+  const { scale, setScale } = useUiScale();
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <h3 className="section-title">Taille de l'affichage</h3>
+      <p style={{ marginTop: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
+        Propre à cet appareil (texte et éléments plus grands ou plus petits).
+      </p>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {UI_SCALE_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            className={`chip${scale === opt.value ? " selected" : ""}`}
+            onClick={() => setScale(opt.value)}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function NotificationsCard({
   daysBefore,
   onDaysBeforeChange,
@@ -86,6 +111,8 @@ function NotificationsCard({
   onSave: () => void;
   status: string | null;
 }) {
+  const [activated, setActivated] = useState(false);
+
   return (
     <div className="card" style={{ marginBottom: 16 }}>
       <h3 className="section-title">Notifications</h3>
@@ -98,7 +125,10 @@ function NotificationsCard({
           className="input"
           style={{ width: 140 }}
           value={daysBefore}
-          onChange={(e) => onDaysBeforeChange(Number(e.target.value))}
+          onChange={(e) => {
+            onDaysBeforeChange(Number(e.target.value));
+            setActivated(false);
+          }}
         >
           <option value={0}>Le jour J</option>
           <option value={1}>1 jour avant</option>
@@ -106,8 +136,15 @@ function NotificationsCard({
           <option value={3}>3 jours avant</option>
         </select>
       </label>
-      <button className="btn btn-primary" onClick={onSave}>
-        Activer les rappels
+      <button
+        className="btn btn-primary"
+        disabled={activated}
+        onClick={() => {
+          onSave();
+          setActivated(true);
+        }}
+      >
+        {activated ? "Rappels activés ✅" : "Activer les rappels"}
       </button>
       {status && <p style={{ fontSize: 13, marginTop: 10 }}>{status}</p>}
     </div>
@@ -415,6 +452,8 @@ function DuoSettings() {
 
       <ThemeModeCard />
 
+      <UiScaleCard />
+
       <NotificationsCard
         daysBefore={daysBefore}
         onDaysBeforeChange={setDaysBefore}
@@ -580,6 +619,8 @@ function SoloSettings() {
       <AppearanceCard imageUrl={settings.theme_image_url} onPickImage={handleImagePick} uploading={uploading} />
 
       <ThemeModeCard />
+
+      <UiScaleCard />
 
       <NotificationsCard
         daysBefore={daysBefore}

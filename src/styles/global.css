@@ -19,6 +19,9 @@
   --md-sys-color-error: #ba1a1a;
   --md-sys-color-on-error: #ffffff;
 
+  --ui-scale: 1;
+  zoom: var(--ui-scale);
+
   --radius-s: 12px;
   --radius-m: 20px;
   --radius-l: 28px;
