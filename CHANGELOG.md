@@ -5,6 +5,8 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 
 ## Non publié
 
+## v1.0.16 — 2026-09-18
+
 - Nouveau réglage "Taille de l'affichage" (Réglages) : texte et éléments
   plus grands ou plus petits, propre à chaque téléphone.
 - La barre d'état (heure, batterie) est masquée dans l'app.
