@@ -109,3 +109,30 @@ export function isWithinRange(date: string, start: string | null, end: string | 
   const d = toDate(date).getTime();
   return d >= toDate(start).getTime() && d <= toDate(end).getTime();
 }
+
+/**
+ * Jours de règles prédits, en projetant plusieurs cycles à partir de
+ * `nextPeriodStart` jusqu'à couvrir la date `until` — sans ça, le calendrier
+ * ne prédisait que le tout prochain cycle et n'affichait plus rien en
+ * naviguant sur les mois suivants.
+ */
+export function predictedPeriodDatesUntil(
+  nextPeriodStart: string | null,
+  averageCycleLength: number,
+  averagePeriodLength: number,
+  until: Date
+): Set<string> {
+  const result = new Set<string>();
+  if (!nextPeriodStart) return result;
+
+  let cursor = toDate(nextPeriodStart);
+  const untilTime = until.getTime();
+  // Garde-fou : au plus 24 cycles projetés (~2 ans), largement suffisant.
+  for (let cycle = 0; cycle < 24 && cursor.getTime() <= untilTime; cycle++) {
+    for (let i = 0; i < averagePeriodLength; i++) {
+      result.add(format(addDays(cursor, i), "yyyy-MM-dd"));
+    }
+    cursor = addDays(cursor, averageCycleLength);
+  }
+  return result;
+}

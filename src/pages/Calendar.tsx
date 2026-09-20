@@ -13,7 +13,7 @@ import {
 } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useCycleData } from "../context/CycleDataContext";
-import { computeCyclePrediction, isWithinRange } from "../lib/cyclePredictions";
+import { computeCyclePrediction, isWithinRange, predictedPeriodDatesUntil } from "../lib/cyclePredictions";
 import { FLOW_INTENSITY_EMOJI, MOOD_OPTIONS, SYMPTOM_EMOJI, SYMPTOM_OPTIONS, VAGINAL_PAIN_EMOJI } from "../types";
 import DaySheet from "../components/DaySheet";
 
@@ -34,6 +34,20 @@ export default function Calendar() {
     const end = endOfWeek(endOfMonth(month), { weekStartsOn: 1 });
     return eachDayOfInterval({ start, end });
   }, [month]);
+
+  // Projette la prédiction sur plusieurs cycles jusqu'au mois affiché : sans
+  // ça, naviguer sur le mois suivant ne montrait plus aucune règle prédite
+  // dès que le tout prochain cycle était déjà passé.
+  const predictedPeriodDates = useMemo(
+    () =>
+      predictedPeriodDatesUntil(
+        prediction.nextPeriodStart,
+        prediction.averageCycleLength,
+        prediction.averagePeriodLength,
+        days[days.length - 1]
+      ),
+    [prediction.nextPeriodStart, prediction.averageCycleLength, prediction.averagePeriodLength, days]
+  );
 
   const flowByDate = useMemo(() => {
     const map = new Map<string, string>();
@@ -68,15 +82,7 @@ export default function Calendar() {
     if (!isSameMonth(date, month)) classes.push("outside");
     if (isToday(date)) classes.push("today");
     if (flowByDate.has(dateStr)) classes.push(`flow-${flowByDate.get(dateStr)}`);
-    else if (
-      prediction.nextPeriodStart &&
-      dateStr >= prediction.nextPeriodStart &&
-      dateStr <
-        format(
-          new Date(new Date(prediction.nextPeriodStart).getTime() + prediction.averagePeriodLength * 86400000),
-          "yyyy-MM-dd"
-        )
-    ) {
+    else if (predictedPeriodDates.has(dateStr)) {
       classes.push("predicted-period");
     } else if (isWithinRange(dateStr, prediction.fertileWindowStart, prediction.fertileWindowEnd)) {
       classes.push("fertile");
