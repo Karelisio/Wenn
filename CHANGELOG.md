@@ -5,6 +5,8 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 
 ## Non publié
 
+## v1.0.18 — 2026-09-20
+
 - La prédiction des règles se projette maintenant sur plusieurs cycles à
   venir : naviguer sur le calendrier des mois suivants continue d'afficher
   les règles prédites, au lieu de s'arrêter après le tout prochain cycle.
