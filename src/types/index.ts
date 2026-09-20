@@ -45,7 +45,14 @@ export const SYMPTOM_EMOJI: Record<Symptom, string> = {
   autre_douleur: "⚠️",
 };
 
-export const FLOW_EMOJI = "🩸";
+/** Emoji affiché sur le calendrier / la saisie du jour selon la quantité de flux. */
+export const FLOW_INTENSITY_EMOJI: Record<FlowIntensity, string> = {
+  spotting: "🟤",
+  leger: "🩸",
+  moyen: "🩸🩸",
+  abondant: "🩸🩸🩸",
+};
+
 export const VAGINAL_PAIN_EMOJI = "🔥";
 
 export const MOOD_OPTIONS = ["😊", "😌", "😐", "😢", "😡", "🥱", "🥰", "😖"] as const;

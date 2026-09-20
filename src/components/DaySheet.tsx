@@ -2,13 +2,20 @@ import { useEffect, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useCycleData } from "../context/CycleDataContext";
-import { SYMPTOM_LABELS, SYMPTOM_OPTIONS, MOOD_OPTIONS, VAGINAL_PAIN_EMOJI, type FlowIntensity } from "../types";
+import {
+  SYMPTOM_LABELS,
+  SYMPTOM_OPTIONS,
+  MOOD_OPTIONS,
+  FLOW_INTENSITY_EMOJI,
+  VAGINAL_PAIN_EMOJI,
+  type FlowIntensity,
+} from "../types";
 
 const FLOW_OPTIONS: { value: FlowIntensity; label: string; emoji: string }[] = [
-  { value: "spotting", label: "Spotting", emoji: "🟤" },
-  { value: "leger", label: "Léger", emoji: "🩸" },
-  { value: "moyen", label: "Moyen", emoji: "🩸🩸" },
-  { value: "abondant", label: "Abondant", emoji: "🩸🩸🩸" },
+  { value: "spotting", label: "Spotting", emoji: FLOW_INTENSITY_EMOJI.spotting },
+  { value: "leger", label: "Léger", emoji: FLOW_INTENSITY_EMOJI.leger },
+  { value: "moyen", label: "Moyen", emoji: FLOW_INTENSITY_EMOJI.moyen },
+  { value: "abondant", label: "Abondant", emoji: FLOW_INTENSITY_EMOJI.abondant },
 ];
 
 const VAGINAL_PAIN_OPTIONS: { value: FlowIntensity; label: string; emoji: string }[] = [
@@ -29,6 +36,7 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
   const [note, setNote] = useState(existing?.note ?? "");
   const [newPartnerNote, setNewPartnerNote] = useState("");
   const [customSymptom, setCustomSymptom] = useState("");
+  const [customMood, setCustomMood] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -50,7 +58,15 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
     setCustomSymptom("");
   }
 
+  function addCustomMood() {
+    const trimmed = customMood.trim();
+    if (!trimmed) return;
+    setMood(trimmed);
+    setCustomMood("");
+  }
+
   const customSymptoms = symptoms.filter((s) => !(SYMPTOM_OPTIONS as readonly string[]).includes(s));
+  const isCustomMood = mood !== null && !(MOOD_OPTIONS as readonly string[]).includes(mood);
 
   async function handleSave() {
     setSaving(true);
@@ -119,7 +135,31 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
                 {m}
               </button>
             ))}
+            {isCustomMood && (
+              <button className="chip selected" disabled={!canEdit} onClick={() => setMood(null)}>
+                {mood} ✕
+              </button>
+            )}
           </div>
+          {canEdit && (
+            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+              <input
+                className="input"
+                placeholder="Humeur spécifique (ex: stressée, sereine...)"
+                value={customMood}
+                onChange={(e) => setCustomMood(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addCustomMood();
+                  }
+                }}
+              />
+              <button className="btn btn-secondary" onClick={addCustomMood} disabled={!customMood.trim()}>
+                Ajouter
+              </button>
+            </div>
+          )}
         </section>
 
         <section style={{ marginBottom: 20 }}>

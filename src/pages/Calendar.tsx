@@ -14,7 +14,7 @@ import {
 import { fr } from "date-fns/locale";
 import { useCycleData } from "../context/CycleDataContext";
 import { computeCyclePrediction, isWithinRange } from "../lib/cyclePredictions";
-import { FLOW_EMOJI, SYMPTOM_EMOJI, SYMPTOM_OPTIONS, VAGINAL_PAIN_EMOJI } from "../types";
+import { FLOW_INTENSITY_EMOJI, MOOD_OPTIONS, SYMPTOM_EMOJI, SYMPTOM_OPTIONS, VAGINAL_PAIN_EMOJI } from "../types";
 import DaySheet from "../components/DaySheet";
 
 const WEEKDAYS = ["L", "M", "M", "J", "V", "S", "D"];
@@ -47,8 +47,9 @@ export default function Calendar() {
     const map = new Map<string, string>();
     for (const d of cycleDays) {
       const icons: string[] = [];
-      if (d.flow) icons.push(FLOW_EMOJI);
+      if (d.flow) icons.push(FLOW_INTENSITY_EMOJI[d.flow]);
       if (d.vaginal_pain) icons.push(VAGINAL_PAIN_EMOJI);
+      if (d.mood) icons.push((MOOD_OPTIONS as readonly string[]).includes(d.mood) ? d.mood : "💭");
       for (const s of SYMPTOM_OPTIONS) {
         if (d.symptoms.includes(s)) icons.push(SYMPTOM_EMOJI[s]);
       }
@@ -66,7 +67,7 @@ export default function Calendar() {
     const classes = ["calendar-day"];
     if (!isSameMonth(date, month)) classes.push("outside");
     if (isToday(date)) classes.push("today");
-    if (flowByDate.has(dateStr)) classes.push("period");
+    if (flowByDate.has(dateStr)) classes.push(`flow-${flowByDate.get(dateStr)}`);
     else if (
       prediction.nextPeriodStart &&
       dateStr >= prediction.nextPeriodStart &&

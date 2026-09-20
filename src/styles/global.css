@@ -309,7 +309,24 @@ button, input, textarea, select {
   box-shadow: inset 0 0 0 2px var(--md-sys-color-primary);
 }
 
-.calendar-day.period {
+/* Quantité de sang visible directement sur le calendrier : plus le flux est
+   abondant, plus la couleur est marquée (du plus clair au plein primary). */
+.calendar-day.flow-spotting {
+  background: color-mix(in srgb, var(--md-sys-color-primary) 22%, transparent);
+  color: var(--md-sys-color-on-surface);
+}
+
+.calendar-day.flow-leger {
+  background: color-mix(in srgb, var(--md-sys-color-primary) 48%, transparent);
+  color: var(--md-sys-color-on-surface);
+}
+
+.calendar-day.flow-moyen {
+  background: color-mix(in srgb, var(--md-sys-color-primary) 75%, transparent);
+  color: var(--md-sys-color-on-primary);
+}
+
+.calendar-day.flow-abondant {
   background: var(--md-sys-color-primary);
   color: var(--md-sys-color-on-primary);
 }

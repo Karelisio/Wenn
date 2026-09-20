@@ -5,6 +5,13 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 
 ## Non publié
 
+- Le calendrier affiche la quantité de sang (spotting à abondant) par une
+  couleur plus ou moins marquée sur le jour, en plus de l'emoji.
+- Nouveau marqueur 💭 sur le calendrier quand une humeur est enregistrée un
+  jour (en plus du flux, des douleurs et des symptômes).
+- Ajout d'un champ pour enregistrer une humeur spécifique, en plus des emoji
+  proposés.
+
 ## v1.0.16 — 2026-09-18
 
 - Nouveau réglage "Taille de l'affichage" (Réglages) : texte et éléments
