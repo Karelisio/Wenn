@@ -8,6 +8,9 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 - Correctif : au-delà de 1000 jours enregistrés, les plus récents ne se
   chargeaient plus (ni dans le calendrier, ni dans la prédiction, ni dans
   l'export). Tout l'historique est maintenant chargé.
+- Correctif : dans la fiche du jour, ce qui était en cours de saisie pouvait
+  être remplacé d'un coup par la version enregistrée (mise à jour reçue en
+  arrière-plan). Une fois un choix fait, la saisie n'est plus touchée.
 
 ## v1.0.19 — 2026-09-30
 
