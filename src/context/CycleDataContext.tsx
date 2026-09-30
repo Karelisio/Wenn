@@ -10,6 +10,11 @@ export interface CycleDataValue {
   canEdit: boolean;
   averageCycleLength: number;
   averagePeriodLength: number;
+  /**
+   * Délai du rappel de règles, en jours avant la date prévue (voir ReminderSync) ;
+   * null tant qu'il n'est pas connu (mode duo : profil pas encore chargé, hors ligne...).
+   */
+  notificationsDaysBefore: number | null;
   cycleDays: CycleDay[];
   partnerNotes: PartnerNote[];
   loading: boolean;

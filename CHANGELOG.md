@@ -5,6 +5,42 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 
 ## Non publié
 
+- Supprimer l'espace (titulaire) : l'avertissement précise maintenant que
+  toutes les données Orbit sont aussi effacées, l'app propose d'exporter une
+  sauvegarde avant, et il faut taper « SUPPRIMER » pour confirmer.
+- Sans réseau, l'app n'affiche plus l'écran de bienvenue (« Es-tu celle qui
+  suit son cycle ? ») : elle montre la dernière copie enregistrée sur le
+  téléphone, ou un bouton « Réessayer » s'il n'y en a pas encore.
+- Correctif : les saisies faites sans réseau pouvaient se perdre. Elles sont
+  maintenant bien mises de côté puis envoyées au retour de la connexion. Si un
+  enregistrement échoue pour une autre raison, un message s'affiche et la
+  fiche du jour reste ouverte.
+- Prédiction plus fiable : un spotting n'est plus pris pour le début des
+  règles (il pouvait décaler la date prévue d'environ deux semaines), et un
+  cycle inhabituellement long ou court pèse moins dans la durée du cycle.
+- Correctif : l'app se rechargeait d'elle-même environ toutes les heures (la
+  fiche du jour en cours de saisie se fermait et le calendrier revenait au
+  mois actuel). Les données se mettent aussi à jour en revenant dans l'app.
+- Une suppression faite sur l'autre téléphone apparaît maintenant tout de
+  suite, sans avoir à relancer l'app.
+- Les widgets se mettent à jour tout seuls chaque jour, même sans ouvrir
+  l'app (le compte à rebours restait figé).
+- Correctif : le nombre de jours avant les règles pouvait être décalé d'un
+  jour entre minuit et 2 h du matin.
+- Si l'app se ferme toute seule, un rapport s'affiche ensuite dans Réglages
+  pour aider à corriger le problème.
+- Le rappel de règles se recale tout seul quand la date prévue change (plus
+  besoin de réappuyer sur « Activer les rappels »). Réglages indique si la
+  date du rappel est déjà passée au lieu d'annoncer « Notification
+  programmée », et la carte n'est plus proposée au/à la partenaire.
+- Nouvelle carte « Alarmes et rappels » dans Réglages, tant que ce réglage
+  du téléphone n'est pas autorisé : sans lui, le rappel peut arriver en
+  retard.
+- Correctif : se connecter avec le lien reçu par e-mail fonctionne aussi
+  quand l'app était complètement fermée.
+- Le code d'invitation est accepté en majuscules comme en minuscules, et le
+  clavier ne le corrige plus automatiquement.
+
 ## v1.0.18 — 2026-09-20
 
 - La prédiction des règles se projette maintenant sur plusieurs cycles à

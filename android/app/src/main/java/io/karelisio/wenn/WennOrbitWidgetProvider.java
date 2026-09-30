@@ -4,7 +4,6 @@ import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -18,9 +17,10 @@ import android.widget.RemoteViews;
  * situer visuellement où on en est dans le cycle, avec le nombre de jours
  * restants au centre. Un widget d'écran d'accueil ne peut pas jouer d'animation
  * continue (il vit dans le processus du launcher, pas celui de l'app) : le
- * point avance donc d'un cran à chaque rafraîchissement des données, comme une
- * aiguille d'horloge lente calée sur la longueur moyenne du cycle plutôt que
- * de tourner en direct.
+ * point avance donc d'un cran à chaque rafraîchissement du widget (recalculé
+ * d'après la date du jour, voir updatePeriodMillis), comme une aiguille
+ * d'horloge lente calée sur la longueur moyenne du cycle plutôt que de
+ * tourner en direct.
  */
 public class WennOrbitWidgetProvider extends AppWidgetProvider {
 
@@ -32,20 +32,29 @@ public class WennOrbitWidgetProvider extends AppWidgetProvider {
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         for (int appWidgetId : appWidgetIds) {
-            updateWidget(context, appWidgetManager, appWidgetId);
+            // onUpdate tourne dans le processus de l'app : une erreur de rendu
+            // non rattrapée la fermerait entièrement.
+            try {
+                updateWidget(context, appWidgetManager, appWidgetId);
+            } catch (Throwable ignored) {
+            }
         }
     }
 
     @Override
     public void onAppWidgetOptionsChanged(Context context, AppWidgetManager appWidgetManager, int appWidgetId, Bundle newOptions) {
-        updateWidget(context, appWidgetManager, appWidgetId);
+        try {
+            updateWidget(context, appWidgetManager, appWidgetId);
+        } catch (Throwable ignored) {
+        }
     }
 
     static void updateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
-        SharedPreferences prefs = context.getSharedPreferences(WennWidgetProvider.PREFS_NAME, Context.MODE_PRIVATE);
-        boolean hasData = prefs.getBoolean(WennWidgetProvider.KEY_HAS_DATA, false);
-        int daysRemaining = prefs.getInt(WennWidgetProvider.KEY_DAYS_REMAINING, -1);
-        float progress = prefs.getFloat(WennWidgetProvider.KEY_CYCLE_PROGRESS, 0f);
+        // Recalculé à partir de la date du jour à chaque rendu (voir WennWidgetProvider.readState).
+        WennWidgetProvider.CycleState state = WennWidgetProvider.readState(context);
+        boolean hasData = state.hasData;
+        int daysRemaining = state.daysRemaining;
+        float progress = state.progress;
         boolean periodDay = hasData && daysRemaining <= 0;
 
         // En dessous d'~70dp de côté, l'anneau devient trop fin pour rester lisible :
@@ -107,7 +116,10 @@ public class WennOrbitWidgetProvider extends AppWidgetProvider {
         ComponentName component = new ComponentName(context, WennOrbitWidgetProvider.class);
         int[] ids = manager.getAppWidgetIds(component);
         for (int id : ids) {
-            updateWidget(context, manager, id);
+            try {
+                updateWidget(context, manager, id);
+            } catch (Throwable ignored) {
+            }
         }
     }
 }

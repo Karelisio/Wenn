@@ -12,12 +12,28 @@ function toDate(dateStr: string): Date {
 }
 
 /**
- * Regroupe les jours de règles consécutifs (flow non nul) en "débuts de cycle",
- * pour en déduire la longueur des cycles passés.
+ * Vrai flux de règles. Le spotting (et l'absence de flux) ne compte ni pour
+ * détecter un début de règles ni dans leur durée : un spotting en milieu de
+ * cycle devenait sinon un "début de règles" et décalait la prochaine date
+ * d'environ deux semaines. Il reste affiché tel quel au calendrier.
+ */
+function isPeriodFlow(day: CycleDay): boolean {
+  return day.flow === "leger" || day.flow === "moyen" || day.flow === "abondant";
+}
+
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+/**
+ * Regroupe les jours de règles consécutifs (vrai flux, voir isPeriodFlow) en
+ * "débuts de cycle", pour en déduire la longueur des cycles passés.
  */
 function getPeriodStarts(days: CycleDay[]): string[] {
   const periodDates = days
-    .filter((d) => d.flow)
+    .filter(isPeriodFlow)
     .map((d) => d.date)
     .sort();
 
@@ -49,17 +65,18 @@ export function computeCyclePrediction(
     }
   }
 
+  // Médiane (et non moyenne) des 6 dernières durées : un cycle inhabituel
+  // (règles oubliées dans la saisie, cycle isolé très long ou très court) ne
+  // décale plus toute la prédiction.
   const recentLengths = cycleLengths.slice(-6).map((c) => c.length);
-  const averageCycleLength = recentLengths.length
-    ? Math.round(recentLengths.reduce((a, b) => a + b, 0) / recentLengths.length)
-    : fallbackCycleLength;
+  const averageCycleLength = recentLengths.length ? Math.round(median(recentLengths)) : fallbackCycleLength;
 
   const lastPeriodStart = starts.length ? starts[starts.length - 1] : null;
 
-  // Longueur moyenne des règles observées
+  // Longueur moyenne des règles observées (vrai flux seulement, voir isPeriodFlow)
   const periodLengths: number[] = [];
   let currentRun = 0;
-  const sortedFlowDays = days.filter((d) => d.flow).map((d) => d.date).sort();
+  const sortedFlowDays = days.filter(isPeriodFlow).map((d) => d.date).sort();
   for (let i = 0; i < sortedFlowDays.length; i++) {
     currentRun++;
     const next = sortedFlowDays[i + 1];

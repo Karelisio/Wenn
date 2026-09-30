@@ -6,13 +6,21 @@ import { useCycleData } from "../context/CycleDataContext";
 import { useMode } from "../context/ModeContext";
 import { useThemeMode } from "../context/ThemeModeContext";
 import { useUiScale, UI_SCALE_OPTIONS } from "../context/UiScaleContext";
-import { supabase } from "../lib/supabase";
+import { isNetworkError, supabase } from "../lib/supabase";
 import { applyThemeFromImageUrl } from "../lib/materialYou";
 import { resizeImageToDataUrl } from "../lib/localStore";
 import { exportCycleDaysAsFile, parseBackupFile } from "../lib/backup";
 import { computeCyclePrediction } from "../lib/cyclePredictions";
-import { requestNotificationPermission, schedulePeriodNotification } from "../lib/notifications";
+import {
+  isExactAlarmGranted,
+  isPeriodReminderEnabled,
+  openExactAlarmSettings,
+  requestNotificationPermission,
+  schedulePeriodNotification,
+  setPeriodReminderEnabled,
+} from "../lib/notifications";
 import { checkForUpdate, downloadAndInstallUpdate, openUpdateDownload, type UpdateCheckResult } from "../lib/appUpdate";
+import { clearLastCrash, getLastCrash, type CrashReport } from "../lib/crashLog";
 import { Capacitor } from "@capacitor/core";
 import ThemeModeCard from "../components/ThemeModeCard";
 
@@ -100,6 +108,37 @@ function UiScaleCard() {
   );
 }
 
+/**
+ * Active le rappel de règles sur cet appareil (reprogrammé ensuite automatiquement
+ * par ReminderSync à chaque changement de prédiction) et programme tout de suite le
+ * prochain. Le message ne dit « programmée » que si une notification l'a vraiment été.
+ */
+async function enablePeriodReminder(
+  nextPeriodStart: string | null,
+  daysBefore: number
+): Promise<{ enabled: boolean; message: string }> {
+  if (!Capacitor.isNativePlatform()) {
+    return {
+      enabled: false,
+      message: "Les notifications natives ne sont actives que dans l'app installée (Android/iOS).",
+    };
+  }
+  if (!(await requestNotificationPermission())) {
+    return { enabled: false, message: "Permission de notification refusée." };
+  }
+  setPeriodReminderEnabled(true);
+  if (!nextPeriodStart) {
+    return { enabled: true, message: "Pas encore assez de données pour prédire la prochaine notification." };
+  }
+  const scheduled = await schedulePeriodNotification(nextPeriodStart, daysBefore);
+  return {
+    enabled: true,
+    message: scheduled
+      ? "Notification programmée ✅"
+      : "La date du rappel est déjà passée : il sera programmé pour tes prochaines règles prévues.",
+  };
+}
+
 function NotificationsCard({
   daysBefore,
   onDaysBeforeChange,
@@ -108,10 +147,17 @@ function NotificationsCard({
 }: {
   daysBefore: number;
   onDaysBeforeChange: (n: number) => void;
-  onSave: () => void;
+  /** Renvoie si le rappel est bien activé (permission accordée). */
+  onSave: () => Promise<boolean>;
   status: string | null;
 }) {
   const [activated, setActivated] = useState(false);
+
+  // Le rappel reste actif d'une visite à l'autre (voir ReminderSync) : le bouton
+  // l'indique, et ne redevient actif que si le délai change.
+  useEffect(() => {
+    isPeriodReminderEnabled().then(setActivated);
+  }, []);
 
   return (
     <div className="card" style={{ marginBottom: 16 }}>
@@ -139,14 +185,48 @@ function NotificationsCard({
       <button
         className="btn btn-primary"
         disabled={activated}
-        onClick={() => {
-          onSave();
+        onClick={async () => {
           setActivated(true);
+          setActivated(await onSave());
         }}
       >
         {activated ? "Rappels activés ✅" : "Activer les rappels"}
       </button>
       {status && <p style={{ fontSize: 13, marginTop: 10 }}>{status}</p>}
+    </div>
+  );
+}
+
+/**
+ * Sans ce réglage système accordé (Android 12+), le rappel de règles est programmé
+ * en alarme inexacte et peut n'arriver qu'à la réouverture de l'app (voir
+ * isExactAlarmGranted dans lib/notifications.ts). N'apparaît que si le réglage
+ * manque, et disparaît une fois accordé.
+ */
+function ExactAlarmCard() {
+  const [granted, setGranted] = useState(true);
+
+  useEffect(() => {
+    isExactAlarmGranted().then(setGranted);
+  }, []);
+
+  if (granted) return null;
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <h3 className="section-title">Alarmes et rappels</h3>
+      <p style={{ marginTop: 0, fontSize: 13 }}>
+        Pour que le rappel de règles arrive à l'heure même si Wenn n'est pas ouverte, autorise "Alarmes et rappels"
+        dans les réglages système.
+      </p>
+      <button
+        className="btn btn-primary"
+        onClick={async () => {
+          if (await openExactAlarmSettings()) setGranted(true);
+        }}
+      >
+        Autoriser
+      </button>
     </div>
   );
 }
@@ -311,6 +391,68 @@ function UpdateCard() {
   );
 }
 
+/**
+ * Affiche la dernière fermeture brutale enregistrée côté natif. Sans accès au
+ * logcat de l'appareil, c'est le seul moyen de diagnostiquer une app qui « se
+ * ferme toute seule » : la carte n'apparaît que s'il y a quelque chose à
+ * signaler.
+ */
+function CrashCard() {
+  const [crash, setCrash] = useState<CrashReport | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    getLastCrash().then(setCrash);
+  }, []);
+
+  if (!crash) return null;
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <h3 className="section-title">Dernière fermeture inattendue</h3>
+      <p style={{ marginTop: 0, fontSize: 13 }}>
+        L'app s'est fermée seule{crash.when ? ` le ${crash.when}` : ""}. Copie ce
+        rapport et envoie-le pour qu'on corrige le problème.
+      </p>
+      <pre
+        style={{
+          fontSize: 11,
+          maxHeight: 160,
+          overflow: "auto",
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-word",
+          background: "var(--md-sys-color-surface-variant)",
+          color: "var(--md-sys-color-on-surface-variant)",
+          padding: 8,
+          borderRadius: 8,
+        }}
+      >
+        {crash.trace}
+      </pre>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button
+          className="btn btn-secondary"
+          onClick={() => {
+            navigator.clipboard?.writeText(crash.trace);
+            setCopied(true);
+          }}
+        >
+          {copied ? "Copié ✅" : "Copier"}
+        </button>
+        <button
+          className="btn btn-secondary"
+          onClick={() => {
+            clearLastCrash();
+            setCrash(null);
+          }}
+        >
+          Effacer
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function DuoSettings() {
   const { user, profile, signOut, refreshProfile } = useAuth();
   const { couple, role, otherPartyEmail, leaveCouple, renameCouple } = useCouple();
@@ -369,22 +511,43 @@ function DuoSettings() {
 
   async function handleRestoreBackup(entries: { date: string; flow: import("../types").FlowIntensity | null; vaginal_pain: import("../types").FlowIntensity | null; symptoms: string[]; mood: string | null; note: string | null }[]) {
     for (const entry of entries) {
-      await upsertCycleDay(entry.date, {
+      const { error } = await upsertCycleDay(entry.date, {
         flow: entry.flow,
         vaginal_pain: entry.vaginal_pain,
         symptoms: entry.symptoms,
         mood: entry.mood,
         note: entry.note,
       });
+      // Refus du serveur (hors ligne, l'écriture est mise en file et compte comme réussie) :
+      // BackupCard affiche l'erreur au lieu d'annoncer une restauration complète.
+      if (error) throw new Error(error);
     }
+  }
+
+  // Côté titulaire, leave_couple() supprime l'espace EN CASCADE : l'historique Wenn,
+  // mais aussi toutes les données Orbit du couple (même projet Supabase, même
+  // espace). D'où l'avertissement complet, l'export proposé avant, et la
+  // confirmation à taper (un simple "OK" se valide trop facilement par erreur).
+  async function confirmOwnerDeletion(): Promise<boolean> {
+    if (cycleDays.length > 0 && window.confirm("Exporter une sauvegarde avant de supprimer ?")) {
+      try {
+        await exportCycleDaysAsFile(cycleDays, couple?.name ?? "");
+      } catch {
+        window.alert("L'export a échoué : la suppression est annulée.");
+        return false;
+      }
+    }
+    const typed = window.prompt("Pour confirmer la suppression définitive, tape SUPPRIMER :");
+    return typed?.trim().toLowerCase() === "supprimer";
   }
 
   async function handleLeaveCouple() {
     const warning =
       role === "owner"
-        ? "Quitter supprimera définitivement cet espace et tout son historique (règles, symptômes, notes). Le lien avec ton/ta partenaire sera aussi rompu. Continuer ?"
+        ? "Supprimer cet espace effacera définitivement tout l'historique Wenn (règles, symptômes, notes) ET toutes les données Orbit (événements, tâches, budget, journal), qui utilise le même espace partagé. Le lien avec ton/ta partenaire sera aussi rompu. Continuer ?"
         : "Tu vas te délier de cet espace (tu pourras en rejoindre un autre ou en créer un). Les données de la titulaire ne sont pas affectées. Continuer ?";
     if (!window.confirm(warning)) return;
+    if (role === "owner" && !(await confirmOwnerDeletion())) return;
     setLeaving(true);
     const { error } = await leaveCouple();
     setLeaving(false);
@@ -399,25 +562,24 @@ function DuoSettings() {
   }
 
   async function handleSaveNotifications() {
-    if (!user) return;
-    await supabase.from("profiles").update({ notifications_days_before: daysBefore }).eq("id", user.id);
+    if (!user) return false;
+    const { error, status } = await supabase
+      .from("profiles")
+      .update({ notifications_days_before: daysBefore })
+      .eq("id", user.id);
+    if (error) {
+      setNotifStatus(
+        isNetworkError(error, status)
+          ? "Pas de connexion internet : réessaie une fois en ligne."
+          : `Impossible d'enregistrer le délai : ${error.message}`
+      );
+      return false;
+    }
     await refreshProfile();
 
-    if (!Capacitor.isNativePlatform()) {
-      setNotifStatus("Les notifications natives ne sont actives que dans l'app installée (Android/iOS).");
-      return;
-    }
-    const granted = await requestNotificationPermission();
-    if (!granted) {
-      setNotifStatus("Permission de notification refusée.");
-      return;
-    }
-    if (prediction.nextPeriodStart) {
-      await schedulePeriodNotification(prediction.nextPeriodStart, daysBefore);
-      setNotifStatus("Notification programmée ✅");
-    } else {
-      setNotifStatus("Pas encore assez de données pour prédire la prochaine notification.");
-    }
+    const { enabled, message } = await enablePeriodReminder(prediction.nextPeriodStart, daysBefore);
+    setNotifStatus(message);
+    return enabled;
   }
 
   return (
@@ -454,12 +616,19 @@ function DuoSettings() {
 
       <UiScaleCard />
 
-      <NotificationsCard
-        daysBefore={daysBefore}
-        onDaysBeforeChange={setDaysBefore}
-        onSave={handleSaveNotifications}
-        status={notifStatus}
-      />
+      {/* Rappel « Tes règles... » : réservé à la titulaire, sans objet pour le/la partenaire. */}
+      {role === "owner" && (
+        <>
+          <NotificationsCard
+            daysBefore={daysBefore}
+            onDaysBeforeChange={setDaysBefore}
+            onSave={handleSaveNotifications}
+            status={notifStatus}
+          />
+
+          <ExactAlarmCard />
+        </>
+      )}
 
       <BackupCard
         cycleDays={cycleDays}
@@ -467,6 +636,8 @@ function DuoSettings() {
         canRestore={canEdit}
         onRestore={handleRestoreBackup}
       />
+
+      <CrashCard />
 
       <UpdateCard />
 
@@ -583,22 +754,9 @@ function SoloSettings() {
 
   async function handleSaveNotifications() {
     updateSettings({ notifications_days_before: daysBefore });
-
-    if (!Capacitor.isNativePlatform()) {
-      setNotifStatus("Les notifications natives ne sont actives que dans l'app installée (Android/iOS).");
-      return;
-    }
-    const granted = await requestNotificationPermission();
-    if (!granted) {
-      setNotifStatus("Permission de notification refusée.");
-      return;
-    }
-    if (prediction.nextPeriodStart) {
-      await schedulePeriodNotification(prediction.nextPeriodStart, daysBefore);
-      setNotifStatus("Notification programmée ✅");
-    } else {
-      setNotifStatus("Pas encore assez de données pour prédire la prochaine notification.");
-    }
+    const { enabled, message } = await enablePeriodReminder(prediction.nextPeriodStart, daysBefore);
+    setNotifStatus(message);
+    return enabled;
   }
 
   return (
@@ -629,7 +787,11 @@ function SoloSettings() {
         status={notifStatus}
       />
 
+      <ExactAlarmCard />
+
       <BackupCard cycleDays={cycleDays} coupleName="Mon cycle" canRestore onRestore={handleRestoreBackup} />
+
+      <CrashCard />
 
       <UpdateCard />
 

@@ -310,3 +310,127 @@ alter table public.cycle_days
   drop constraint if exists cycle_days_flow_check;
 alter table public.cycle_days
   add constraint cycle_days_flow_check check (flow in ('spotting', 'leger', 'moyen', 'abondant'));
+
+-- ---------------------------------------------------------------------------
+-- Migration additive : durcissement de la sécurité de l'espace partagé
+-- (appliquée sur le projet le 2026-09-30 ; la partie propre à Orbit —
+-- set_together_since, policy UPDATE du journal — est dans le schema.sql d'Orbit)
+-- ---------------------------------------------------------------------------
+-- join_couple : refusée sans session (auth.uid() NULL faisait passer les
+-- tests à NULL et vidait partner_id), code insensible à la casse, et pas
+-- d'appartenance à deux espaces à la fois.
+create or replace function public.join_couple(p_invite_code text)
+returns public.couples
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_couple public.couples;
+begin
+  if v_uid is null then
+    raise exception 'Connexion requise';
+  end if;
+
+  select * into v_couple from public.couples
+    where invite_code = lower(trim(p_invite_code))
+    for update;
+
+  if v_couple.id is null then
+    raise exception 'Code d''invitation invalide';
+  end if;
+
+  if v_couple.owner_id = v_uid then
+    raise exception 'Vous êtes déjà propriétaire de ce cycle';
+  end if;
+
+  if v_couple.partner_id is not null and v_couple.partner_id is distinct from v_uid then
+    raise exception 'Ce cycle a déjà un partenaire lié';
+  end if;
+
+  if exists (
+    select 1 from public.couples c
+    where c.id <> v_couple.id and (c.owner_id = v_uid or c.partner_id = v_uid)
+  ) then
+    raise exception 'Tu fais déjà partie d''un autre espace : quitte-le d''abord';
+  end if;
+
+  update public.couples set partner_id = v_uid where id = v_couple.id
+  returning * into v_couple;
+
+  return v_couple;
+end;
+$$;
+
+-- Postgres accorde EXECUTE à PUBLIC par défaut : un revoke explicite est
+-- nécessaire pour que anon ne puisse plus appeler ces RPC.
+revoke execute on function public.join_couple(text) from public, anon;
+revoke execute on function public.leave_couple() from public, anon;
+grant execute on function public.join_couple(text) to authenticated;
+grant execute on function public.leave_couple() to authenticated;
+-- Fonction trigger uniquement (jamais appelée en RPC).
+revoke execute on function public.handle_new_user() from public, anon, authenticated;
+alter function public.set_updated_at() set search_path = public;
+
+-- couples : owner_id, partner_id et invite_code ne se modifient plus que via
+-- les fonctions SECURITY DEFINER (join_couple, leave_couple), jamais par un
+-- UPDATE direct depuis l'API.
+create or replace function public.couples_protect_columns()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if current_user in ('authenticated', 'anon') and (
+       new.owner_id is distinct from old.owner_id
+    or new.partner_id is distinct from old.partner_id
+    or new.invite_code is distinct from old.invite_code
+  ) then
+    raise exception 'Modification non autorisée';
+  end if;
+  return new;
+end;
+$$;
+
+revoke execute on function public.couples_protect_columns() from public, anon, authenticated;
+
+drop trigger if exists couples_protect_columns on public.couples;
+create trigger couples_protect_columns
+  before update on public.couples
+  for each row execute function public.couples_protect_columns();
+
+-- Un nouvel espace naît sans partenaire, et jamais pour quelqu'un qui fait
+-- déjà partie d'un espace (sinon .maybeSingle() échoue côté apps).
+drop policy if exists "couples: insert as owner" on public.couples;
+create policy "couples: insert as owner"
+  on public.couples for insert
+  with check (
+    auth.uid() = owner_id
+    and partner_id is null
+    and not exists (
+      select 1 from public.couples c
+      where c.owner_id = auth.uid() or c.partner_id = auth.uid()
+    )
+  );
+
+create unique index if not exists couples_owner_id_key on public.couples (owner_id);
+create unique index if not exists couples_partner_id_key on public.couples (partner_id)
+  where partner_id is not null;
+
+-- Bucket theme-images : les URL publiques restent accessibles (bucket
+-- public), mais plus de listing des dossiers des autres, upload limité à
+-- son propre dossier (les deux apps écrivent déjà dans <user.id>/...),
+-- taille plafonnée.
+drop policy if exists "theme-images: public read" on storage.objects;
+drop policy if exists "theme-images: owner read" on storage.objects;
+create policy "theme-images: owner read"
+  on storage.objects for select
+  using (bucket_id = 'theme-images' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "theme-images: authenticated upload" on storage.objects;
+drop policy if exists "theme-images: owner upload" on storage.objects;
+create policy "theme-images: owner upload"
+  on storage.objects for insert
+  with check (bucket_id = 'theme-images' and (storage.foldername(name))[1] = auth.uid()::text);
+
+update storage.buckets set file_size_limit = 20971520 where id = 'theme-images';

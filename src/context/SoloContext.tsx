@@ -95,6 +95,7 @@ export function SoloProvider({ children }: { children: ReactNode }) {
     canEdit: true,
     averageCycleLength: 28,
     averagePeriodLength: 5,
+    notificationsDaysBefore: settings.notifications_days_before,
     cycleDays,
     partnerNotes: [],
     loading: false,
