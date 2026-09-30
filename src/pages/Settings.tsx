@@ -369,13 +369,16 @@ function DuoSettings() {
 
   async function handleRestoreBackup(entries: { date: string; flow: import("../types").FlowIntensity | null; vaginal_pain: import("../types").FlowIntensity | null; symptoms: string[]; mood: string | null; note: string | null }[]) {
     for (const entry of entries) {
-      await upsertCycleDay(entry.date, {
+      const { error } = await upsertCycleDay(entry.date, {
         flow: entry.flow,
         vaginal_pain: entry.vaginal_pain,
         symptoms: entry.symptoms,
         mood: entry.mood,
         note: entry.note,
       });
+      // Refus du serveur (hors ligne, l'écriture est mise en file et compte comme réussie) :
+      // BackupCard affiche l'erreur au lieu d'annoncer une restauration complète.
+      if (error) throw new Error(error);
     }
   }
 

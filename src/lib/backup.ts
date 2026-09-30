@@ -123,3 +123,16 @@ export function loadDuoCache(userId: string): DuoCache | null {
     return null;
   }
 }
+
+/**
+ * Efface la copie locale quand le serveur confirme qu'il n'y a plus d'espace pour
+ * ce compte (quitté, ou supprimé par la titulaire) : sinon un démarrage hors ligne
+ * réafficherait un espace qui n'existe plus.
+ */
+export function clearDuoCache(userId: string): void {
+  try {
+    localStorage.removeItem(`${DUO_CACHE_PREFIX}${userId}`);
+  } catch {
+    // stockage indisponible : rien à effacer
+  }
+}

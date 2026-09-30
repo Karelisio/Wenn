@@ -8,6 +8,13 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 - Supprimer l'espace (titulaire) : l'avertissement précise maintenant que
   toutes les données Orbit sont aussi effacées, l'app propose d'exporter une
   sauvegarde avant, et il faut taper « SUPPRIMER » pour confirmer.
+- Sans réseau, l'app n'affiche plus l'écran de bienvenue (« Es-tu celle qui
+  suit son cycle ? ») : elle montre la dernière copie enregistrée sur le
+  téléphone, ou un bouton « Réessayer » s'il n'y en a pas encore.
+- Correctif : les saisies faites sans réseau pouvaient se perdre. Elles sont
+  maintenant bien mises de côté puis envoyées au retour de la connexion. Si un
+  enregistrement échoue pour une autre raison, un message s'affiche et la
+  fiche du jour reste ouverte.
 
 ## v1.0.18 — 2026-09-20
 

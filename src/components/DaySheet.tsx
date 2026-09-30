@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useCycleData } from "../context/CycleDataContext";
@@ -38,8 +38,14 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
   const [customSymptom, setCustomSymptom] = useState("");
   const [customMood, setCustomMood] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Une fois l'enregistrement tenté, la saisie n'est plus remplacée par la version
+  // enregistrée : en cas de refus du serveur (modification annulée à l'écran), la
+  // feuille reste ouverte avec ce qui a été saisi, pour pouvoir réessayer.
+  const keepInputRef = useRef(false);
 
   useEffect(() => {
+    if (keepInputRef.current) return;
     setFlow(existing?.flow ?? null);
     setVaginalPain(existing?.vaginal_pain ?? null);
     setSymptoms(existing?.symptoms ?? []);
@@ -68,17 +74,28 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
   const customSymptoms = symptoms.filter((s) => !(SYMPTOM_OPTIONS as readonly string[]).includes(s));
   const isCustomMood = mood !== null && !(MOOD_OPTIONS as readonly string[]).includes(mood);
 
+  // Hors ligne, l'enregistrement est mis en file d'attente et compte comme réussi :
+  // seule une vraie erreur garde la feuille ouverte, avec son message.
   async function handleSave() {
+    keepInputRef.current = true;
     setSaving(true);
-    await upsertCycleDay(date, { flow, vaginal_pain: vaginalPain, symptoms, mood, note: note || null });
+    setError(null);
+    const result = await upsertCycleDay(date, { flow, vaginal_pain: vaginalPain, symptoms, mood, note: note || null });
     setSaving(false);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
     onClose();
   }
 
   async function handleAddPartnerNote() {
-    if (!newPartnerNote.trim()) return;
-    await addPartnerNote(date, newPartnerNote.trim());
-    setNewPartnerNote("");
+    const message = newPartnerNote.trim();
+    if (!message) return;
+    setError(null);
+    const result = await addPartnerNote(date, message);
+    if (result.error) setError(result.error);
+    else setNewPartnerNote("");
   }
 
   return (
@@ -243,6 +260,8 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
             </div>
           </section>
         )}
+
+        {error && <p style={{ color: "var(--md-sys-color-error)", fontSize: 13, margin: "0 0 12px" }}>{error}</p>}
 
         <div style={{ display: "flex", gap: 10 }}>
           <button className="btn btn-text" onClick={onClose} style={{ flex: 1 }}>

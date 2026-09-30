@@ -12,7 +12,10 @@ interface QueuedPartnerNote {
   message: string;
 }
 
-export type QueuedMutation = (QueuedCycleDayUpsert | QueuedPartnerNote) & { id: string; createdAt: string };
+/** Une écriture Duo, avant sa mise en file (sans id ni date d'ajout). */
+export type MutationPayload = QueuedCycleDayUpsert | QueuedPartnerNote;
+
+export type QueuedMutation = MutationPayload & { id: string; createdAt: string };
 
 const QUEUE_PREFIX = "wenn-duo-queue-";
 
@@ -38,7 +41,7 @@ function writeQueue(coupleId: string, queue: QueuedMutation[]): void {
   }
 }
 
-export function enqueueMutation(coupleId: string, mutation: QueuedCycleDayUpsert | QueuedPartnerNote): void {
+export function enqueueMutation(coupleId: string, mutation: MutationPayload): void {
   const queue = readQueue(coupleId);
   queue.push({ ...mutation, id: crypto.randomUUID(), createdAt: new Date().toISOString() });
   writeQueue(coupleId, queue);

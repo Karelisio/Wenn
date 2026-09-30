@@ -32,8 +32,29 @@ function AppShell() {
 }
 
 function DuoGate() {
-  const { couple, loading } = useCouple();
+  const { couple, loading, loadError, reload } = useCouple();
+  const { signOut } = useAuth();
   if (loading) return <div className="center-screen">Chargement...</div>;
+  // Échec de chargement sans copie locale : jamais l'écran d'accueil (« Es-tu celle
+  // qui suit son cycle ? »), qui ferait croire qu'il n'existe aucun espace.
+  if (!couple && loadError) {
+    return (
+      <div className="center-screen">
+        <div className="card" style={{ width: "100%", maxWidth: 400, textAlign: "center" }}>
+          <h2 style={{ marginTop: 0 }}>Impossible de charger tes données</h2>
+          <p style={{ color: "var(--md-sys-color-on-surface-variant)", fontSize: 13 }}>{loadError}</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <button className="btn btn-primary" onClick={() => void reload()}>
+              Réessayer
+            </button>
+            <button className="btn btn-text" onClick={() => void signOut()}>
+              Se déconnecter
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   if (!couple) return <Onboarding />;
   return <AppShell />;
 }
