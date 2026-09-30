@@ -15,6 +15,9 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
   maintenant bien mises de côté puis envoyées au retour de la connexion. Si un
   enregistrement échoue pour une autre raison, un message s'affiche et la
   fiche du jour reste ouverte.
+- Prédiction plus fiable : un spotting n'est plus pris pour le début des
+  règles (il pouvait décaler la date prévue d'environ deux semaines), et un
+  cycle inhabituellement long ou court pèse moins dans la durée du cycle.
 
 ## v1.0.18 — 2026-09-20
 
