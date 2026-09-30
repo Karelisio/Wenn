@@ -12,7 +12,10 @@
     <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
-        <item name="android:background">@null</item>
+        <!-- Un fond nul s'affichait noir tant que la WebView n'avait rien peint
+             (flash noir au démarrage) : un vrai fond, clair ou sombre selon le
+             thème du téléphone (values-night), comme dans Orbit. -->
+        <item name="android:windowBackground">@color/appBackground</item>
     </style>
 
 

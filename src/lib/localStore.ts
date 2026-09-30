@@ -15,6 +15,31 @@ const DEFAULT_SETTINGS: LocalSettings = {
   theme_seed_color: null,
 };
 
+/** Clés du stockage local commençant par `prefix` (vide si le stockage est indisponible). */
+export function localKeysWithPrefix(prefix: string): string[] {
+  const keys: string[] = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(prefix)) keys.push(key);
+    }
+  } catch {
+    // stockage indisponible : rien à lister
+  }
+  return keys;
+}
+
+/** Supprime toutes les clés du stockage local commençant par `prefix`. */
+export function removeLocalKeysWithPrefix(prefix: string): void {
+  for (const key of localKeysWithPrefix(prefix)) {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // stockage indisponible : rien à effacer
+    }
+  }
+}
+
 export function loadLocalCycleDays(): CycleDay[] {
   try {
     const raw = localStorage.getItem(CYCLE_DAYS_KEY);

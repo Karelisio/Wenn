@@ -38,35 +38,51 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
   const [customSymptom, setCustomSymptom] = useState("");
   const [customMood, setCustomMood] = useState("");
   const [saving, setSaving] = useState(false);
+  const [addingNote, setAddingNote] = useState(false);
+  const addingNoteRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
-  // Une fois l'enregistrement tenté, la saisie n'est plus remplacée par la version
-  // enregistrée : en cas de refus du serveur (modification annulée à l'écran), la
-  // feuille reste ouverte avec ce qui a été saisi, pour pouvoir réessayer.
-  const keepInputRef = useRef(false);
+  // Vrai dès que l'utilisatrice a touché à la saisie (ou tenté de l'enregistrer) :
+  // à partir de là, elle n'est plus jamais remplacée par la version enregistrée.
+  // En cas de refus du serveur (modification annulée à l'écran), la fiche reste
+  // aussi ouverte avec ce qui a été saisi, pour pouvoir réessayer.
+  const editedRef = useRef(false);
+  const shownDateRef = useRef(date);
 
-  // Resynchronise la saisie quand le contenu enregistré du jour change (autre
-  // appareil, temps réel...), pas à chaque nouvel objet identique : un simple
-  // rechargement en arrière-plan effaçait sinon ce qui était en cours de saisie.
+  // Saisie reprise de la version enregistrée à l'ouverture et à chaque changement
+  // de jour. Ensuite, un changement du contenu enregistré (autre appareil, écho
+  // temps réel, rechargement au retour dans l'app) n'est repris que tant que rien
+  // n'a été touché : il effaçait sinon ce qui était en cours de saisie.
   const existingContent = JSON.stringify(
     existing ? [existing.flow, existing.vaginal_pain, existing.symptoms, existing.mood, existing.note] : null
   );
   useEffect(() => {
-    if (keepInputRef.current) return;
+    if (shownDateRef.current !== date) {
+      shownDateRef.current = date;
+      editedRef.current = false;
+    } else if (editedRef.current) {
+      return;
+    }
     setFlow(existing?.flow ?? null);
     setVaginalPain(existing?.vaginal_pain ?? null);
     setSymptoms(existing?.symptoms ?? []);
     setMood(existing?.mood ?? null);
     setNote(existing?.note ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [existingContent]);
+  }, [date, existingContent]);
+
+  function markEdited() {
+    editedRef.current = true;
+  }
 
   function toggleSymptom(s: string) {
+    markEdited();
     setSymptoms((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
   }
 
   function addCustomSymptom() {
     const trimmed = customSymptom.trim();
     if (!trimmed || symptoms.includes(trimmed)) return;
+    markEdited();
     setSymptoms((prev) => [...prev, trimmed]);
     setCustomSymptom("");
   }
@@ -74,6 +90,7 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
   function addCustomMood() {
     const trimmed = customMood.trim();
     if (!trimmed) return;
+    markEdited();
     setMood(trimmed);
     setCustomMood("");
   }
@@ -84,7 +101,7 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
   // Hors ligne, l'enregistrement est mis en file d'attente et compte comme réussi :
   // seule une vraie erreur garde la feuille ouverte, avec son message.
   async function handleSave() {
-    keepInputRef.current = true;
+    markEdited();
     setSaving(true);
     setError(null);
     const result = await upsertCycleDay(date, { flow, vaginal_pain: vaginalPain, symptoms, mood, note: note || null });
@@ -96,13 +113,22 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
     onClose();
   }
 
+  // Un seul envoi à la fois : un double appui sur « Ajouter » envoyait le même mot
+  // doux deux fois (la référence bloque même avant que le bouton soit grisé).
   async function handleAddPartnerNote() {
     const message = newPartnerNote.trim();
-    if (!message) return;
+    if (!message || addingNoteRef.current) return;
+    addingNoteRef.current = true;
+    setAddingNote(true);
     setError(null);
-    const result = await addPartnerNote(date, message);
-    if (result.error) setError(result.error);
-    else setNewPartnerNote("");
+    try {
+      const result = await addPartnerNote(date, message);
+      if (result.error) setError(result.error);
+      else setNewPartnerNote("");
+    } finally {
+      addingNoteRef.current = false;
+      setAddingNote(false);
+    }
   }
 
   return (
@@ -121,7 +147,10 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
                 key={opt.value}
                 className={`chip${flow === opt.value ? " selected" : ""}`}
                 disabled={!canEdit}
-                onClick={() => setFlow(flow === opt.value ? null : opt.value)}
+                onClick={() => {
+                  markEdited();
+                  setFlow(flow === opt.value ? null : opt.value);
+                }}
               >
                 {opt.emoji} {opt.label}
               </button>
@@ -137,7 +166,10 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
                 key={opt.value}
                 className={`chip${vaginalPain === opt.value ? " selected" : ""}`}
                 disabled={!canEdit}
-                onClick={() => setVaginalPain(vaginalPain === opt.value ? null : opt.value)}
+                onClick={() => {
+                  markEdited();
+                  setVaginalPain(vaginalPain === opt.value ? null : opt.value);
+                }}
               >
                 {opt.emoji} {opt.label}
               </button>
@@ -154,13 +186,23 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
                 className={`chip${mood === m ? " selected" : ""}`}
                 disabled={!canEdit}
                 style={{ fontSize: 18, padding: "8px 12px" }}
-                onClick={() => setMood(mood === m ? null : m)}
+                onClick={() => {
+                  markEdited();
+                  setMood(mood === m ? null : m);
+                }}
               >
                 {m}
               </button>
             ))}
             {isCustomMood && (
-              <button className="chip selected" disabled={!canEdit} onClick={() => setMood(null)}>
+              <button
+                className="chip selected"
+                disabled={!canEdit}
+                onClick={() => {
+                  markEdited();
+                  setMood(null);
+                }}
+              >
                 {mood} ✕
               </button>
             )}
@@ -234,7 +276,10 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
             placeholder="Une note pour cette journée..."
             value={note}
             disabled={!canEdit}
-            onChange={(e) => setNote(e.target.value)}
+            onChange={(e) => {
+              markEdited();
+              setNote(e.target.value);
+            }}
           />
         </section>
 
@@ -261,7 +306,11 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
                 value={newPartnerNote}
                 onChange={(e) => setNewPartnerNote(e.target.value)}
               />
-              <button className="btn btn-secondary" onClick={handleAddPartnerNote}>
+              <button
+                className="btn btn-secondary"
+                onClick={handleAddPartnerNote}
+                disabled={addingNote || !newPartnerNote.trim()}
+              >
                 Ajouter
               </button>
             </div>

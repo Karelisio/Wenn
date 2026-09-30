@@ -1,27 +1,14 @@
 import { Capacitor } from "@capacitor/core";
 import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
-import type { Couple, CycleDay, FlowIntensity, PartnerNote } from "../types";
-
-export interface BackupEntry {
-  date: string;
-  flow: FlowIntensity | null;
-  vaginal_pain: FlowIntensity | null;
-  symptoms: string[];
-  mood: string | null;
-  note: string | null;
-}
-
-interface BackupFile {
-  app: "wenn";
-  version: 1;
-  exportedAt: string;
-  coupleName: string;
-  cycleDays: BackupEntry[];
-}
+import type { Couple, CycleDay, PartnerNote } from "../types";
+import { backupFileName, buildBackup, parseBackup, type ParsedBackup } from "./backupFormat";
+import { removeLocalKeysWithPrefix } from "./localStore";
 
 /**
- * Exporte les données de cycle en JSON.
+ * Exporte les données en JSON : jours du cycle et mots doux (format décrit dans
+ * backupFormat.ts). Les données viennent de l'état de l'app, qui contient tout
+ * l'historique (chargé page par page) ainsi que les saisies pas encore envoyées.
  *
  * Sur le web, le déclenchement `<a download>` + URL de blob fonctionne
  * normalement. Mais dans la WebView Capacitor Android, cet attribut
@@ -31,23 +18,13 @@ interface BackupFile {
  * partage système (`@capacitor/share`) pour que l'utilisatrice choisisse où
  * l'enregistrer (Drive, Fichiers, message...).
  */
-export async function exportCycleDaysAsFile(cycleDays: CycleDay[], coupleName: string): Promise<void> {
-  const payload: BackupFile = {
-    app: "wenn",
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    coupleName,
-    cycleDays: cycleDays.map((d) => ({
-      date: d.date,
-      flow: d.flow,
-      vaginal_pain: d.vaginal_pain,
-      symptoms: d.symptoms,
-      mood: d.mood,
-      note: d.note,
-    })),
-  };
-  const filename = `wenn-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`;
-  const json = JSON.stringify(payload, null, 2);
+export async function exportBackupFile(
+  cycleDays: CycleDay[],
+  partnerNotes: PartnerNote[],
+  coupleName: string
+): Promise<void> {
+  const filename = backupFileName();
+  const json = JSON.stringify(buildBackup(cycleDays, partnerNotes, coupleName), null, 2);
 
   if (Capacitor.isNativePlatform()) {
     await Filesystem.writeFile({ path: filename, directory: Directory.Cache, data: json, encoding: Encoding.UTF8 });
@@ -67,20 +44,16 @@ export async function exportCycleDaysAsFile(cycleDays: CycleDay[], coupleName: s
   URL.revokeObjectURL(url);
 }
 
-export function parseBackupFile(file: File): Promise<BackupEntry[]> {
+/** Lit un fichier de sauvegarde choisi par l'utilisatrice (voir parseBackup). */
+export function parseBackupFile(file: File): Promise<ParsedBackup> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("Impossible de lire le fichier"));
     reader.onload = () => {
       try {
-        const data = JSON.parse(reader.result as string) as Partial<BackupFile>;
-        if (!Array.isArray(data.cycleDays)) throw new Error("Format de sauvegarde invalide");
-        const entries = data.cycleDays.filter(
-          (d): d is BackupEntry => typeof d === "object" && d !== null && typeof (d as BackupEntry).date === "string"
-        );
-        resolve(entries);
-      } catch {
-        reject(new Error("Fichier de sauvegarde illisible ou corrompu"));
+        resolve(parseBackup(String(reader.result ?? "")));
+      } catch (err) {
+        reject(err instanceof Error ? err : new Error("Fichier de sauvegarde illisible ou corrompu"));
       }
     };
     reader.readAsText(file);
@@ -135,4 +108,13 @@ export function clearDuoCache(userId: string): void {
   } catch {
     // stockage indisponible : rien à effacer
   }
+}
+
+/**
+ * Efface la copie locale de tous les comptes (déconnexion) : tout l'historique de
+ * cycle et les mots doux ne doivent pas rester sur le téléphone, en particulier
+ * celui du/de la partenaire.
+ */
+export function clearAllDuoCaches(): void {
+  removeLocalKeysWithPrefix(DUO_CACHE_PREFIX);
 }

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fond de fenêtre par défaut (clair), le temps que la WebView peigne le
+         thème Material You de l'app — évite un flash noir au démarrage. Même
+         teinte que le fond du thème rose par défaut (DEFAULT_SEED_COLOR). -->
+    <color name="appBackground">#FFFBFF</color>
+</resources>

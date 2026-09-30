@@ -9,7 +9,8 @@ import { useUiScale, UI_SCALE_OPTIONS } from "../context/UiScaleContext";
 import { isNetworkError, supabase } from "../lib/supabase";
 import { applyThemeFromImageUrl } from "../lib/materialYou";
 import { resizeImageToDataUrl } from "../lib/localStore";
-import { exportCycleDaysAsFile, parseBackupFile } from "../lib/backup";
+import { exportBackupFile, parseBackupFile } from "../lib/backup";
+import { restoreBackup, restoreSummary, type ParsedBackup, type RestoreReport } from "../lib/backupFormat";
 import { computeCyclePrediction } from "../lib/cyclePredictions";
 import {
   isExactAlarmGranted,
@@ -23,6 +24,7 @@ import { checkForUpdate, downloadAndInstallUpdate, openUpdateDownload, type Upda
 import { clearLastCrash, getLastCrash, type CrashReport } from "../lib/crashLog";
 import { Capacitor } from "@capacitor/core";
 import ThemeModeCard from "../components/ThemeModeCard";
+import type { CycleDay, PartnerNote } from "../types";
 
 export default function Settings() {
   const { mode } = useMode();
@@ -231,16 +233,23 @@ function ExactAlarmCard() {
   );
 }
 
+type RestoreHandler = (
+  backup: ParsedBackup,
+  onProgress: (done: number, total: number) => void
+) => Promise<RestoreReport>;
+
 function BackupCard({
   cycleDays,
+  partnerNotes,
   coupleName,
   canRestore,
   onRestore,
 }: {
-  cycleDays: import("../types").CycleDay[];
+  cycleDays: CycleDay[];
+  partnerNotes: PartnerNote[];
   coupleName: string;
   canRestore: boolean;
-  onRestore: (entries: import("../lib/backup").BackupEntry[]) => Promise<void>;
+  onRestore: RestoreHandler;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -251,7 +260,7 @@ function BackupCard({
     setExporting(true);
     setStatus(null);
     try {
-      await exportCycleDaysAsFile(cycleDays, coupleName);
+      await exportBackupFile(cycleDays, partnerNotes, coupleName);
     } catch {
       setStatus("Échec de l'export");
     } finally {
@@ -259,13 +268,16 @@ function BackupCard({
     }
   }
 
+  // Le résultat annoncé est celui réellement obtenu : entrées invalides (écartées à
+  // la lecture) et écritures refusées sont comptées à part, au lieu d'annoncer
+  // « N jour(s) restauré(s) » quoi qu'il arrive.
   async function handleFile(file: File) {
     setRestoring(true);
     setStatus(null);
     try {
-      const entries = await parseBackupFile(file);
-      await onRestore(entries);
-      setStatus(`${entries.length} jour(s) restauré(s) ✅`);
+      const backup = await parseBackupFile(file);
+      const report = await onRestore(backup, (done, total) => setStatus(`Restauration… ${done}/${total}`));
+      setStatus(restoreSummary(report));
     } catch (err) {
       setStatus(err instanceof Error ? err.message : "Échec de la restauration");
     } finally {
@@ -293,6 +305,9 @@ function BackupCard({
               hidden
               onChange={(e) => {
                 const file = e.target.files?.[0];
+                // Vidé tout de suite : sinon choisir à nouveau le même fichier (après
+                // une restauration incomplète) ne déclencherait plus rien.
+                e.target.value = "";
                 if (file) handleFile(file);
               }}
             />
@@ -391,6 +406,16 @@ function UpdateCard() {
   );
 }
 
+/** Copie du texte ; faux si le presse-papiers est refusé ou indisponible. */
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Affiche la dernière fermeture brutale enregistrée côté natif. Sans accès au
  * logcat de l'appareil, c'est le seul moyen de diagnostiquer une app qui « se
@@ -399,7 +424,7 @@ function UpdateCard() {
  */
 function CrashCard() {
   const [crash, setCrash] = useState<CrashReport | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<"copied" | "failed" | null>(null);
 
   useEffect(() => {
     getLastCrash().then(setCrash);
@@ -432,12 +457,13 @@ function CrashCard() {
       <div style={{ display: "flex", gap: 8 }}>
         <button
           className="btn btn-secondary"
-          onClick={() => {
-            navigator.clipboard?.writeText(crash.trace);
-            setCopied(true);
+          onClick={async () => {
+            // Presse-papiers refusé ou indisponible : on le dit au lieu d'afficher
+            // « Copié » sans que rien ne soit copié.
+            setCopyStatus((await copyToClipboard(crash.trace)) ? "copied" : "failed");
           }}
         >
-          {copied ? "Copié ✅" : "Copier"}
+          {copyStatus === "copied" ? "Copié ✅" : copyStatus === "failed" ? "Copie impossible" : "Copier"}
         </button>
         <button
           className="btn btn-secondary"
@@ -449,6 +475,11 @@ function CrashCard() {
           Effacer
         </button>
       </div>
+      {copyStatus === "failed" && (
+        <p style={{ fontSize: 13, marginTop: 10 }}>
+          Garde le doigt appuyé sur le rapport pour le sélectionner et le copier à la main.
+        </p>
+      )}
     </div>
   );
 }
@@ -456,11 +487,20 @@ function CrashCard() {
 function DuoSettings() {
   const { user, profile, signOut, refreshProfile } = useAuth();
   const { couple, role, otherPartyEmail, leaveCouple, renameCouple } = useCouple();
-  const { cycleDays, averageCycleLength, averagePeriodLength, canEdit, upsertCycleDay, offline, pendingSyncCount } =
-    useCycleData();
+  const {
+    cycleDays,
+    partnerNotes,
+    averageCycleLength,
+    averagePeriodLength,
+    canEdit,
+    upsertCycleDay,
+    addPartnerNote,
+    offline,
+    pendingSyncCount,
+  } = useCycleData();
   const { isDark } = useThemeMode();
   const [uploading, setUploading] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [inviteCopyStatus, setInviteCopyStatus] = useState<"copied" | "failed" | null>(null);
   const [leaving, setLeaving] = useState(false);
   const [nameInput, setNameInput] = useState(couple?.name ?? "");
   const [renaming, setRenaming] = useState(false);
@@ -471,6 +511,13 @@ function DuoSettings() {
   useEffect(() => {
     setNameInput(couple?.name ?? "");
   }, [couple?.name]);
+
+  // Le profil arrive souvent après l'ouverture de Réglages : le délai affiché
+  // restait alors sur « 2 jours avant », et « Activer les rappels » l'écrasait.
+  const savedDaysBefore = profile?.notifications_days_before;
+  useEffect(() => {
+    if (savedDaysBefore != null) setDaysBefore(savedDaysBefore);
+  }, [savedDaysBefore]);
 
   async function handleRename() {
     const trimmed = nameInput.trim();
@@ -490,39 +537,39 @@ function DuoSettings() {
   async function handleImagePick(file: File) {
     if (!user) return;
     setUploading(true);
-
-    const path = `${user.id}/${Date.now()}-${file.name}`;
-    const { error: uploadError } = await supabase.storage.from("theme-images").upload(path, file, {
-      upsert: true,
-    });
-
-    if (!uploadError) {
-      const { data } = supabase.storage.from("theme-images").getPublicUrl(path);
-      const publicUrl = data.publicUrl;
-      const seedHex = await applyThemeFromImageUrl(publicUrl, isDark);
-      await supabase
-        .from("profiles")
-        .update({ theme_image_url: publicUrl, theme_seed_color: seedHex })
-        .eq("id", user.id);
-      await refreshProfile();
-    }
-    setUploading(false);
-  }
-
-  async function handleRestoreBackup(entries: { date: string; flow: import("../types").FlowIntensity | null; vaginal_pain: import("../types").FlowIntensity | null; symptoms: string[]; mood: string | null; note: string | null }[]) {
-    for (const entry of entries) {
-      const { error } = await upsertCycleDay(entry.date, {
-        flow: entry.flow,
-        vaginal_pain: entry.vaginal_pain,
-        symptoms: entry.symptoms,
-        mood: entry.mood,
-        note: entry.note,
+    // finally : une image illisible (applyThemeFromImageUrl lève) laissait sinon le
+    // bouton bloqué sur « Chargement... ».
+    try {
+      const path = `${user.id}/${Date.now()}-${file.name}`;
+      const { error: uploadError } = await supabase.storage.from("theme-images").upload(path, file, {
+        upsert: true,
       });
-      // Refus du serveur (hors ligne, l'écriture est mise en file et compte comme réussie) :
-      // BackupCard affiche l'erreur au lieu d'annoncer une restauration complète.
-      if (error) throw new Error(error);
+
+      if (!uploadError) {
+        const { data } = supabase.storage.from("theme-images").getPublicUrl(path);
+        const publicUrl = data.publicUrl;
+        const seedHex = await applyThemeFromImageUrl(publicUrl, isDark);
+        await supabase
+          .from("profiles")
+          .update({ theme_image_url: publicUrl, theme_seed_color: seedHex })
+          .eq("id", user.id);
+        await refreshProfile();
+      }
+    } catch {
+      // image illisible, réseau... : le thème actuel est simplement gardé
+    } finally {
+      setUploading(false);
     }
   }
+
+  // Mots doux : seuls ceux écrits par ce compte peuvent être recréés (la base
+  // n'accepte un mot doux que de son auteur) ; ceux déjà présents sont gardés tels quels.
+  const handleRestoreBackup: RestoreHandler = (backup, onProgress) =>
+    restoreBackup(backup, {
+      upsertCycleDay,
+      notes: user ? { existing: partnerNotes, userId: user.id, add: addPartnerNote } : undefined,
+      onProgress,
+    });
 
   // Côté titulaire, leave_couple() supprime l'espace EN CASCADE : l'historique Wenn,
   // mais aussi toutes les données Orbit du couple (même projet Supabase, même
@@ -531,7 +578,7 @@ function DuoSettings() {
   async function confirmOwnerDeletion(): Promise<boolean> {
     if (cycleDays.length > 0 && window.confirm("Exporter une sauvegarde avant de supprimer ?")) {
       try {
-        await exportCycleDaysAsFile(cycleDays, couple?.name ?? "");
+        await exportBackupFile(cycleDays, partnerNotes, couple?.name ?? "");
       } catch {
         window.alert("L'export a échoué : la suppression est annulée.");
         return false;
@@ -556,9 +603,10 @@ function DuoSettings() {
 
   async function copyInviteCode() {
     if (!couple) return;
-    await navigator.clipboard.writeText(couple.invite_code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    // Copie refusée : le code reste lisible juste à côté, on le dit au lieu de
+    // laisser croire qu'il a été copié.
+    setInviteCopyStatus((await copyToClipboard(couple.invite_code)) ? "copied" : "failed");
+    setTimeout(() => setInviteCopyStatus(null), 2000);
   }
 
   async function handleSaveNotifications() {
@@ -632,6 +680,7 @@ function DuoSettings() {
 
       <BackupCard
         cycleDays={cycleDays}
+        partnerNotes={partnerNotes}
         coupleName={couple?.name ?? ""}
         canRestore={canEdit}
         onRestore={handleRestoreBackup}
@@ -699,7 +748,11 @@ function DuoSettings() {
                 {couple?.invite_code}
               </code>
               <button className="btn btn-text" onClick={copyInviteCode}>
-                {copied ? "Copié !" : "Copier"}
+                {inviteCopyStatus === "copied"
+                  ? "Copié !"
+                  : inviteCopyStatus === "failed"
+                    ? "Copie impossible"
+                    : "Copier"}
               </button>
             </div>
           </>
@@ -740,17 +793,9 @@ function SoloSettings() {
     }
   }
 
-  async function handleRestoreBackup(entries: { date: string; flow: import("../types").FlowIntensity | null; vaginal_pain: import("../types").FlowIntensity | null; symptoms: string[]; mood: string | null; note: string | null }[]) {
-    for (const entry of entries) {
-      await upsertCycleDay(entry.date, {
-        flow: entry.flow,
-        vaginal_pain: entry.vaginal_pain,
-        symptoms: entry.symptoms,
-        mood: entry.mood,
-        note: entry.note,
-      });
-    }
-  }
+  // Pas de mots doux en mode solo : ceux d'une sauvegarde duo restent dans le fichier.
+  const handleRestoreBackup: RestoreHandler = (backup, onProgress) =>
+    restoreBackup(backup, { upsertCycleDay, onProgress });
 
   async function handleSaveNotifications() {
     updateSettings({ notifications_days_before: daysBefore });
@@ -789,7 +834,13 @@ function SoloSettings() {
 
       <ExactAlarmCard />
 
-      <BackupCard cycleDays={cycleDays} coupleName="Mon cycle" canRestore onRestore={handleRestoreBackup} />
+      <BackupCard
+        cycleDays={cycleDays}
+        partnerNotes={[]}
+        coupleName="Mon cycle"
+        canRestore
+        onRestore={handleRestoreBackup}
+      />
 
       <CrashCard />
 

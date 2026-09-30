@@ -16,10 +16,25 @@ import {
 import { fr } from "date-fns/locale";
 import { useCycleData } from "../context/CycleDataContext";
 import { computeCyclePrediction, isWithinRange, predictedPeriodDatesUntil } from "../lib/cyclePredictions";
-import { FLOW_INTENSITY_EMOJI, MOOD_OPTIONS, SYMPTOM_EMOJI, SYMPTOM_OPTIONS, VAGINAL_PAIN_EMOJI } from "../types";
+import {
+  FLOW_INTENSITY_EMOJI,
+  MOOD_OPTIONS,
+  SYMPTOM_EMOJI,
+  SYMPTOM_OPTIONS,
+  VAGINAL_PAIN_EMOJI,
+  type FlowIntensity,
+} from "../types";
 import DaySheet from "../components/DaySheet";
 
 const WEEKDAYS = ["L", "M", "M", "J", "V", "S", "D"];
+
+/** Flux tel que lu par la lecture d'écran (le calendrier ne l'affiche qu'en couleur et en emoji). */
+const FLOW_SPOKEN: Record<FlowIntensity, string> = {
+  spotting: "spotting",
+  leger: "règles, flux léger",
+  moyen: "règles, flux moyen",
+  abondant: "règles, flux abondant",
+};
 
 export default function Calendar() {
   const { coupleName, cycleDays, role, averageCycleLength, averagePeriodLength } = useCycleData();
@@ -52,7 +67,7 @@ export default function Calendar() {
   );
 
   const flowByDate = useMemo(() => {
-    const map = new Map<string, string>();
+    const map = new Map<string, FlowIntensity>();
     for (const d of cycleDays) if (d.flow) map.set(d.date, d.flow);
     return map;
   }, [cycleDays]);
@@ -91,6 +106,23 @@ export default function Calendar() {
     }
     if (dateStr === prediction.ovulationDate) classes.push("ovulation");
     return classes.join(" ");
+  }
+
+  // Libellé lu par la lecture d'écran à la place du contenu de la case (un numéro
+  // et des emoji) : la date complète et ce que les couleurs indiquent.
+  function dayLabel(date: Date): string {
+    const dateStr = format(date, "yyyy-MM-dd");
+    const parts = [format(date, "EEEE d MMMM yyyy", { locale: fr })];
+    if (isToday(date)) parts.push("aujourd'hui");
+    const flow = flowByDate.get(dateStr);
+    if (flow) parts.push(FLOW_SPOKEN[flow]);
+    else if (predictedPeriodDates.has(dateStr)) parts.push("règles prévues");
+    else if (isWithinRange(dateStr, prediction.fertileWindowStart, prediction.fertileWindowEnd)) {
+      parts.push("fenêtre fertile");
+    }
+    if (dateStr === prediction.ovulationDate) parts.push("ovulation estimée");
+    if (emojisByDate.has(dateStr)) parts.push("saisie enregistrée");
+    return parts.join(", ");
   }
 
   // Jours calendaires entre dates locales : un Math.ceil sur new Date("aaaa-mm-jj")
@@ -135,11 +167,21 @@ export default function Calendar() {
 
       <div className="card">
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-          <button className="btn btn-text" style={{ padding: 8 }} onClick={() => setMonth(addMonths(month, -1))}>
+          <button
+            className="btn btn-text"
+            style={{ padding: 8 }}
+            onClick={() => setMonth(addMonths(month, -1))}
+            aria-label="Mois précédent"
+          >
             ◀
           </button>
           <strong style={{ textTransform: "capitalize" }}>{format(month, "MMMM yyyy", { locale: fr })}</strong>
-          <button className="btn btn-text" style={{ padding: 8 }} onClick={() => setMonth(addMonths(month, 1))}>
+          <button
+            className="btn btn-text"
+            style={{ padding: 8 }}
+            onClick={() => setMonth(addMonths(month, 1))}
+            aria-label="Mois suivant"
+          >
             ▶
           </button>
         </div>
@@ -158,6 +200,8 @@ export default function Calendar() {
                 key={date.toISOString()}
                 className={dayClasses(date)}
                 onClick={() => setSelectedDate(dateStr)}
+                aria-label={dayLabel(date)}
+                aria-current={isToday(date) ? "date" : undefined}
               >
                 <span className="calendar-day-number">{date.getDate()}</span>
                 {emojis && <span className="calendar-day-emojis">{emojis}</span>}

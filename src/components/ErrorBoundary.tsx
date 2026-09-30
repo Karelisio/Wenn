@@ -28,7 +28,16 @@ export default class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.error) {
       return (
-        <div style={{ padding: 24, fontFamily: "monospace", background: "#fffbfe", color: "#1c1b1f", minHeight: "100dvh" }}>
+        <div
+          style={{
+            // La barre d'état reste affichée (bord à bord) : le texte commence dessous.
+            padding: "calc(16px + var(--safe-top, 8px)) 24px 24px",
+            fontFamily: "monospace",
+            background: "#fffbfe",
+            color: "#1c1b1f",
+            minHeight: "100dvh",
+          }}
+        >
           <h2 style={{ color: "#b3261e" }}>Wenn a rencontré une erreur</h2>
           <p>{this.state.error.message}</p>
           <pre style={{ whiteSpace: "pre-wrap", fontSize: 12, opacity: 0.8 }}>{this.state.error.stack}</pre>

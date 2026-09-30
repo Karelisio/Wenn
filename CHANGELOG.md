@@ -5,6 +5,40 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 
 ## Non publié
 
+- Correctif : au-delà de 1000 jours enregistrés, les plus récents ne se
+  chargeaient plus (ni dans le calendrier, ni dans la prédiction, ni dans
+  l'export). Tout l'historique est maintenant chargé.
+- Correctif : dans la fiche du jour, ce qui était en cours de saisie pouvait
+  être remplacé d'un coup par la version enregistrée (mise à jour reçue en
+  arrière-plan). Une fois un choix fait, la saisie n'est plus touchée.
+- Se déconnecter ou quitter l'espace efface maintenant du téléphone la copie
+  de l'historique (et les dates affichées par les widgets). Si des
+  modifications n'ont pas encore pu être envoyées, l'app prévient avant de
+  se déconnecter.
+- Sauvegarde : l'export contient aussi les mots doux, et le fichier porte la
+  bonne date (plus celle de la veille après minuit). À la restauration, une
+  entrée abîmée est ignorée au lieu d'effacer ce qui existe déjà, et l'app
+  indique combien de jours ont été restaurés ou ignorés.
+- Réglages : le délai du rappel de règles affiché est bien celui enregistré
+  (il pouvait rester sur « 2 jours avant »). Les boutons « Copier » disent
+  quand la copie est impossible, et le choix d'une image de thème ne reste
+  plus bloqué sur « Chargement... ».
+- Un double appui sur « Ajouter » n'envoie plus deux fois le même mot doux.
+- Le jour d'aujourd'hui reste entouré dans le calendrier, aussi pendant la
+  fenêtre fertile et les jours de règles moyennes ou abondantes.
+- Affichage : plus de bande noire en haut de l'écran (la barre avec l'heure
+  reste visible au-dessus de l'app), plus de bandes sur les côtés avec la
+  taille d'affichage « Petite », et plus d'écran noir furtif au lancement.
+- Les polices de caractères sont maintenant incluses dans l'app : lancement
+  plus rapide sur un réseau lent, et même apparence sans connexion.
+- Accessibilité : avec la lecture d'écran, chaque jour du calendrier est
+  annoncé en entier (date, règles, fenêtre fertile...) ainsi que les flèches
+  de mois. Dans le navigateur, la page peut de nouveau être agrandie.
+- Connexion plus sûre : le lien reçu par e-mail ne marche plus que sur le
+  téléphone qui l'a demandé (demande-le et ouvre-le sur le même téléphone,
+  le plus récent s'il y en a plusieurs). Si un lien ne marche pas, l'écran
+  de connexion explique pourquoi.
+
 ## v1.0.19 — 2026-09-30
 
 - Supprimer l'espace (titulaire) : l'avertissement précise maintenant que

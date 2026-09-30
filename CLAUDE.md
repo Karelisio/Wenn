@@ -129,9 +129,13 @@ Si un futur refactor réintroduit `fetch()` ici, le téléchargement recassera.
 La branche de travail est `claude/wenn-cycle-tracking-app-km6x7a`. Le push sur
 `main` déclenche le build + un **auto-tag patch** + une **Release GitHub**
 (APK signé). Le workflow lit la section `## Non publié` de `CHANGELOG.md`
-comme notes de release, l'archive sous `## vX.Y.Z — DATE`, vide `## Non
-publié`, et **repousse ce commit directement sur `main`** avec son propre
-identifiant git.
+comme notes de release, et **seulement après** un APK signé construit et la
+Release publiée (tag créé sur le commit construit), archive ces puces sous
+`## vX.Y.Z — DATE` et **repousse ce commit directement sur `main`** avec son
+propre identifiant git (`scripts/release-changelog.mjs`, testé par le
+smoke-test). `versionCode` = majeur×1 000 000 + mineur×1 000 + patch (v1.0.20 →
+1000020) : **ne jamais revenir à `run_number`** (codes bien plus petits →
+Android refuserait la mise à jour comme un retour en arrière).
 
 Conséquence : **toute deuxième session de push sur `main` dans la même
 fenêtre de travail entre en conflit sur `CHANGELOG.md`.** Séquence standard :
@@ -165,6 +169,25 @@ SQL Editor Supabase** — jamais lui redemander de rejouer tout le fichier. Il
 n'a pas toujours confirmé l'avoir fait ; si une fonctionnalité liée à une
 migration récente semble ne pas marcher côté copine, penser à vérifier ça
 avant de chercher un bug côté code.
+
+## Connexion par lien magique (PKCE)
+
+`flowType: "pkce"` (`lib/supabase.ts`) : le lien reçu par e-mail ne contient
+plus de session en clair mais un `?code=`, échangé par `deepLink.ts`
+(`exchangeCodeForSession`) avec un secret gardé par l'appareil qui a demandé
+le lien — **le lien ne marche que sur ce téléphone, et seulement le plus
+récent**. Des jetons bruts dans une URL ne sont plus jamais acceptés (un lien
+piégé pouvait connecter l'app à un autre compte). En natif, `emailRedirectTo`
+vise le domaine des App Links (`https://wenn-five.vercel.app`), jamais
+`window.location.origin` (= https://localhost dans l'app).
+
+## RLS : performance (2026-09-30)
+
+Toutes les policies utilisent `(select auth.uid())` (évalué une fois par
+requête, pas par ligne) et une seule policy permissive par (rôle, action) ;
+chaque clé étrangère a son index (fin de `supabase/schema.sql`, déjà appliqué
+sur le projet). Garder cette forme pour toute nouvelle policy (advisor
+Supabase `performance`).
 
 ## Config Supabase Auth (SMTP)
 

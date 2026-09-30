@@ -30,3 +30,17 @@ export function syncDaysRemainingWidget(snapshot: WidgetSnapshot): void {
     // widget non ajouté à l'écran d'accueil, ou échec silencieux sans conséquence
   });
 }
+
+/**
+ * Vide les widgets (déconnexion, espace quitté) : plus aucune date du cycle ne
+ * reste affichée sur l'écran d'accueil (« Ouvre Wenn » à la place).
+ */
+export function clearWidgets(): void {
+  syncDaysRemainingWidget({
+    daysRemaining: null,
+    cycleProgress: 0,
+    nextPeriodStart: null,
+    lastPeriodStart: null,
+    averageCycleLength: null,
+  });
+}
