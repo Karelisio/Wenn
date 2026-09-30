@@ -5,6 +5,10 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 
 ## Non publié
 
+- Correctif : au-delà de 1000 jours enregistrés, les plus récents ne se
+  chargeaient plus (ni dans le calendrier, ni dans la prédiction, ni dans
+  l'export). Tout l'historique est maintenant chargé.
+
 ## v1.0.19 — 2026-09-30
 
 - Supprimer l'espace (titulaire) : l'avertissement précise maintenant que
