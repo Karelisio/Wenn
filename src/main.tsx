@@ -1,7 +1,5 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { Capacitor } from "@capacitor/core";
-import { StatusBar } from "@capacitor/status-bar";
 import App from "./App";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthProvider } from "./context/AuthContext";
@@ -28,13 +26,10 @@ try {
   console.error("initDeepLinks a échoué :", err);
 }
 
-// Barre d'état (heure, batterie...) masquée dans l'app : elle n'apporte rien
-// ici et se superposait au contenu (l'app dessine son propre fond dégradé).
-if (Capacitor.isNativePlatform()) {
-  StatusBar.hide().catch(() => {
-    // plateforme sans barre de statut contrôlable : tant pis
-  });
-}
+// Pas de StatusBar.hide() ici (même correctif que dans Orbit) : Android
+// réaffichait la barre masquée en surimpression sur un fond noir, d'où la bande
+// noire en haut. La barre d'état reste donc normale, et le contenu est décalé
+// dessous par la zone de sécurité CSS (voir .app-shell dans global.css).
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

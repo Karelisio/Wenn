@@ -21,6 +21,10 @@
 
   --ui-scale: 1;
   zoom: var(--ui-scale);
+  /* Hauteur de la barre d'état (+ un peu d'air). Divisée par --ui-scale : le zoom
+     de « Taille de l'affichage » s'applique aussi aux marges, qui doivent pourtant
+     rester égales à la hauteur réelle de la barre, quelle que soit la taille. */
+  --safe-top: calc(env(safe-area-inset-top) / var(--ui-scale) + 8px);
 
   --radius-s: 12px;
   --radius-m: 20px;
@@ -58,13 +62,33 @@ button, input, textarea, select {
   font-family: inherit;
 }
 
+/* Pas de largeur maximale (même correctif que dans Orbit) : ce plafond de 480px
+   hérité d'un rendu web centrait l'app avec des bandes sur les côtés dès que la
+   largeur CSS de l'écran le dépassait (taille d'affichage « Petite » notamment).
+   Dans l'app installée, la WebView fait déjà exactement la largeur de l'écran. */
 .app-shell {
-  max-width: 480px;
-  margin: 0 auto;
+  position: relative;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
+  /* Barre d'état visible et affichage bord à bord imposé par Android 15
+     (targetSdk 35) : sans ce décalage, le contenu passait sous l'heure et les
+     icônes. */
+  padding-top: var(--safe-top);
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+.app-shell::before {
+  /* Même couleur que le haut du dégradé de .screen : sans ça, la bande sous la
+     barre d'état (le padding ci-dessus) retombe sur le fond neutre du body et se
+     voit comme une barre distincte. */
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--safe-top);
+  background: var(--md-sys-color-primary-container);
 }
 
 .screen {
@@ -158,10 +182,8 @@ button, input, textarea, select {
 .bottom-nav {
   position: fixed;
   bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
   width: 100%;
-  max-width: 480px;
   display: flex;
   justify-content: space-around;
   padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
@@ -199,7 +221,7 @@ button, input, textarea, select {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: calc(16px + var(--safe-top)) 24px calc(24px + env(safe-area-inset-bottom));
   background: linear-gradient(180deg, var(--md-sys-color-primary-container) 0%, var(--md-sys-color-background) 320px);
 }
 
@@ -230,7 +252,6 @@ button, input, textarea, select {
 
 .sheet {
   width: 100%;
-  max-width: 480px;
   max-height: 88dvh;
   overflow-y: auto;
   background: var(--md-sys-color-surface);
