@@ -12,6 +12,7 @@ import {
   type CycleDayFields,
 } from "../src/lib/backupFormat.ts";
 import type { CycleDay, FlowIntensity, PartnerNote } from "../src/types/index.ts";
+import { archiveChangelog, DEFAULT_NOTE, releaseNotes } from "./release-changelog.mjs";
 
 let passed = 0;
 function check(name: string, fn: () => void) {
@@ -276,6 +277,43 @@ await checkAsync("mode solo : les mots doux du fichier ne sont ni recréés ni c
   const report = await restoreBackup(parseBackup(JSON.stringify(file)), { upsertCycleDay: async () => ({ error: null }) });
   assert.deepEqual(report, { daysRestored: 1, daysIgnored: 0, notesRestored: 0, notesIgnored: 0 });
   assert.equal(restoreSummary(report), "1 jour restauré ✅");
+});
+
+console.log("\nchangelog de release (CI)");
+const changelog = (pending: string, older = "## v1.0.19 — 2026-09-30\n\n- ancienne\n") =>
+  `# Changelog\n\nIntro.\n\n## Non publié\n${pending ? `\n${pending}\n` : ""}\n${older}`;
+
+check("notes = puces de « Non publié », archivées sous le tag juste en dessous", () => {
+  const content = changelog("- première\n  suite de la première\n- seconde");
+  const notes = releaseNotes(content);
+  assert.equal(notes, "- première\n  suite de la première\n- seconde");
+  assert.equal(
+    archiveChangelog(content, "v1.0.20", "2026-10-01", notes),
+    "# Changelog\n\nIntro.\n\n## Non publié\n\n## v1.0.20 — 2026-10-01\n\n- première\n  suite de la première\n- seconde\n\n## v1.0.19 — 2026-09-30\n\n- ancienne\n"
+  );
+});
+
+check("« Non publié » vide : note par défaut, jamais de section archivée vide", () => {
+  const content = changelog("");
+  const notes = releaseNotes(content);
+  assert.equal(notes, DEFAULT_NOTE);
+  assert.equal(
+    archiveChangelog(content, "v1.0.20", "2026-10-01", notes),
+    `# Changelog\n\nIntro.\n\n## Non publié\n\n## v1.0.20 — 2026-10-01\n\n${DEFAULT_NOTE}\n\n## v1.0.19 — 2026-09-30\n\n- ancienne\n`
+  );
+});
+
+check("main a bougé pendant le build : ni puce déjà publiée répétée, ni puce plus récente perdue", () => {
+  // Commit construit : a et b en attente. Entre-temps sur main, a a été publiée
+  // (v1.0.20) et c ajoutée par un nouveau commit.
+  const built = changelog("- a\n- b");
+  const latestMain = changelog("- b\n- c", "## v1.0.20 — 2026-10-01\n\n- a\n\n## v1.0.19 — 2026-09-30\n\n- ancienne\n");
+  const notes = releaseNotes(built, latestMain);
+  assert.equal(notes, "- b");
+  assert.equal(
+    archiveChangelog(latestMain, "v1.0.21", "2026-10-02", notes),
+    "# Changelog\n\nIntro.\n\n## Non publié\n\n- c\n\n## v1.0.21 — 2026-10-02\n\n- b\n\n## v1.0.20 — 2026-10-01\n\n- a\n\n## v1.0.19 — 2026-09-30\n\n- ancienne\n"
+  );
 });
 
 console.log(`\n${passed} vérifications OK\n`);

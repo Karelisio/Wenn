@@ -172,30 +172,39 @@ comme Duo), et périodiquement en secours (~3h) si l'app n'est pas rouverte.
 
 Le workflow [`.github/workflows/build-android.yml`](./.github/workflows/build-android.yml)
 se déclenche à chaque push sur `main` et à chaque tag `v*` (ex. `v1.0.0`), ou
-manuellement (`workflow_dispatch`). Il :
+manuellement (`workflow_dispatch`). Un seul run à la fois par branche, jamais
+annulé en cours de route. Il :
 
-1. installe les dépendances (`npm ci`) ;
-2. build le frontend React (`npm run build`), avec les variables Supabase
-   injectées depuis les secrets GitHub ;
-3. synchronise Capacitor (`npx cap sync android`) ;
-4. décode le secret `ANDROID_KEYSTORE_BASE64` en fichier `.keystore` ;
-5. build l'APK Android **release, signé**, via Gradle (`./gradlew assembleRelease`) ;
-6. supprime le keystore décodé du runner ;
-7. publie l'APK comme **artifact téléchargeable** (30 jours) sur chaque run, et
-   comme **GitHub Release** (avec le fichier `.apk` attaché) quand le push est un
-   tag `v*`.
+1. installe les dépendances (`npm ci`, Node 22) et s'arrête avec un message
+   clair si l'un des six secrets ci-dessous manque ;
+2. détermine la version à publier (rien n'est encore créé ni poussé) ;
+3. lance `npm run check` (types + tests de la logique pure) ;
+4. build le frontend React (`npm run build`), avec les variables Supabase
+   injectées depuis les secrets GitHub, puis synchronise Capacitor ;
+5. décode le secret `ANDROID_KEYSTORE_BASE64`, build l'APK Android **release,
+   signé** (`./gradlew assembleRelease`), supprime le keystore du runner et
+   vérifie que l'APK est bien signé ;
+6. publie l'APK comme **artifact téléchargeable** (30 jours) sur chaque run ;
+7. sur `main` (ou un tag `v*`) seulement : publie la **GitHub Release** avec le
+   fichier `.apk` attaché (le tag est créé à ce moment-là, sur le commit
+   construit), puis, sur `main`, archive le changelog (voir ci-dessous).
 
 L'APK étant toujours signé avec la **même clé**, il peut être installé par-dessus
 une version précédente sans désinstallation, sur les deux téléphones.
 
-**Versioning, changelog & mise à jour in-app.** Chaque push sur `main` crée et
-pousse automatiquement le tag `v*` suivant (patch +1 depuis le dernier tag
-existant). Les notes de la Release GitHub sont extraites de la section
-`## Non publié` de [`CHANGELOG.md`](./CHANGELOG.md) : ajoute une puce sous cette
-section à chaque changement visible pour l'utilisatrice avant de pousser sur
-`main`. Le workflow archive ensuite cette section sous `## vX.Y.Z — DATE` et la
-repousse sur `main` (un `git pull` peut donc être nécessaire avant un nouveau
-push). Le bouton **Réglages → Mises à jour** compare la version installée à la
+**Versioning, changelog & mise à jour in-app.** Chaque push sur `main` publie
+le tag `v*` suivant (patch +1 depuis le dernier tag existant), seulement une
+fois l'APK signé construit : un build raté ne laisse ni tag ni release.
+L'APK porte `versionName` = `X.Y.Z` et `versionCode` = X × 1 000 000 + Y × 1 000
++ Z (toujours croissant : ne jamais revenir à un code plus petit, Android
+refuserait d'installer la mise à jour). Les notes de la Release GitHub sont
+extraites de la section `## Non publié` de [`CHANGELOG.md`](./CHANGELOG.md)
+(« Corrections et améliorations internes. » si elle est vide) : ajoute une puce
+sous cette section à chaque changement visible pour l'utilisatrice avant de
+pousser sur `main`. Après la Release, le workflow range ces puces sous
+`## vX.Y.Z — DATE` et repousse sur `main` (un `git pull` peut donc être
+nécessaire avant un nouveau push) ; une puce ajoutée entre-temps reste sous
+`## Non publié` pour la version suivante (voir `scripts/release-changelog.mjs`). Le bouton **Réglages → Mises à jour** compare la version installée à la
 dernière Release publiée, affiche ces notes, et propose le téléchargement si
 elle diffère. Pour un vrai bump majeur/mineur (ex. `v2.0.0`), pousse le tag
 toi-même — les auto-tags suivants repartiront de lui :
@@ -247,9 +256,10 @@ suivants (noms exacts, sensibles à la casse) :
 | `ANDROID_KEY_ALIAS`         | Alias de la clé (`wenn-key` dans l'exemple ci-dessus)               |
 | `ANDROID_KEY_PASSWORD`      | Mot de passe de la clé (`-keypass`, peut être identique au précédent) |
 
-Une fois ces six secrets renseignés, chaque push sur `main` produit un APK signé
+Une fois ces six secrets renseignés, chaque run produit un APK signé
 téléchargeable depuis l'onglet **Actions > Build Android APK > Artifacts**, et
-chaque tag `v*` publie en plus une **Release** GitHub avec l'APK attaché.
+chaque push sur `main` (ou tag `v*`) publie en plus une **Release** GitHub avec
+l'APK attaché.
 
 ## Sécurité & vie privée
 
