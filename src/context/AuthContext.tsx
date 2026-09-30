@@ -1,6 +1,14 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { Capacitor } from "@capacitor/core";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
+import {
+  APP_LINK_ORIGIN,
+  clearLoginLinkError,
+  markLoginLinkRequested,
+  reportUnusedWebLoginLink,
+  subscribeLoginLinkError,
+} from "../lib/deepLink";
 import { clearAllDuoCaches } from "../lib/backup";
 import { clearAllPendingMutations, countAllPendingMutations } from "../lib/offlineQueue";
 import { clearWidgets } from "../lib/widgetSync";
@@ -11,6 +19,8 @@ interface AuthContextValue {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  /** Échec du dernier lien de connexion reçu (affiché sur l'écran de connexion). */
+  loginLinkError: string | null;
   signInWithMagicLink: (email: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -22,6 +32,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loginLinkError, setLoginLinkError] = useState<string | null>(null);
+
+  useEffect(() => subscribeLoginLinkError(setLoginLinkError), []);
 
   async function loadProfile(userId: string) {
     const { data } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
@@ -33,11 +46,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(data.session);
       if (data.session?.user) loadProfile(data.session.user.id);
       setLoading(false);
+      reportUnusedWebLoginLink(!!data.session);
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
       if (newSession?.user) {
+        clearLoginLinkError();
         loadProfile(newSession.user.id);
       } else {
         setProfile(null);
@@ -48,9 +63,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function signInWithMagicLink(email: string) {
+    clearLoginLinkError();
+    // Trace de la demande faite sur cet appareil (voir deepLink.ts). Le secret PKCE,
+    // lui, est gardé par supabase-js : le lien ne marchera que sur cet appareil.
+    markLoginLinkRequested();
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: window.location.origin },
+      options: {
+        // Dans l'app, window.location.origin vaut https://localhost : le lien ne
+        // marchait que grâce au repli de Supabase sur l'URL du site. On vise
+        // explicitement le domaine des App Links, qui rouvre l'app.
+        emailRedirectTo: Capacitor.isNativePlatform() ? APP_LINK_ORIGIN : window.location.origin,
+      },
     });
     return { error: error?.message ?? null };
   }
@@ -89,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: session?.user ?? null,
         profile,
         loading,
+        loginLinkError,
         signInWithMagicLink,
         signOut,
         refreshProfile,

@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from "react";
+import { Capacitor } from "@capacitor/core";
 import { useAuth } from "../context/AuthContext";
 import { useMode } from "../context/ModeContext";
 import OrbitMark from "../components/OrbitMark";
 
 export default function Login() {
-  const { signInWithMagicLink } = useAuth();
+  const { signInWithMagicLink, loginLinkError } = useAuth();
   const { resetMode } = useMode();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
@@ -40,11 +41,19 @@ export default function Login() {
           Suivi de cycle, à deux.
         </p>
 
+        {loginLinkError && (
+          <p role="alert" style={{ color: "var(--md-sys-color-error)", fontSize: 13 }}>
+            {loginLinkError}
+          </p>
+        )}
+
         {sent ? (
           <div>
             <p>
-              Un lien de connexion a été envoyé à <strong>{email}</strong>. Ouvre-le depuis ton téléphone
-              pour te connecter.
+              Un lien de connexion a été envoyé à <strong>{email}</strong>.{" "}
+              {Capacitor.isNativePlatform()
+                ? "Ouvre-le sur ce téléphone pour te connecter."
+                : "Ouvre-le sur cet appareil, dans ce même navigateur, pour te connecter."}
             </p>
             <button className="btn btn-text" onClick={() => setSent(false)}>
               Utiliser une autre adresse

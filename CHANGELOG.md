@@ -34,6 +34,10 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 - Accessibilité : avec la lecture d'écran, chaque jour du calendrier est
   annoncé en entier (date, règles, fenêtre fertile...) ainsi que les flèches
   de mois. Dans le navigateur, la page peut de nouveau être agrandie.
+- Connexion plus sûre : le lien reçu par e-mail ne marche plus que sur le
+  téléphone qui l'a demandé (demande-le et ouvre-le sur le même téléphone,
+  le plus récent s'il y en a plusieurs). Si un lien ne marche pas, l'écran
+  de connexion explique pourquoi.
 
 ## v1.0.19 — 2026-09-30
 

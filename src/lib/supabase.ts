@@ -12,6 +12,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl ?? "", supabaseAnonKey ?? "", {
   auth: {
+    // PKCE : le lien magique ne ramène plus une session en clair dans l'URL mais un
+    // code, échangeable seulement avec un secret gardé par l'appareil qui a demandé
+    // le lien (voir deepLink.ts). Sur le web, detectSessionInUrl échange ce ?code=
+    // tout seul au chargement ; les sessions déjà ouvertes restent valables.
+    flowType: "pkce",
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
