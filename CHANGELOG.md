@@ -18,6 +18,9 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 - Prédiction plus fiable : un spotting n'est plus pris pour le début des
   règles (il pouvait décaler la date prévue d'environ deux semaines), et un
   cycle inhabituellement long ou court pèse moins dans la durée du cycle.
+- Correctif : l'app se rechargeait d'elle-même environ toutes les heures (la
+  fiche du jour en cours de saisie se fermait et le calendrier revenait au
+  mois actuel). Les données se mettent aussi à jour en revenant dans l'app.
 
 ## v1.0.18 — 2026-09-20
 

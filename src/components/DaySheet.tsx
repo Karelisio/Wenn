@@ -44,6 +44,12 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
   // feuille reste ouverte avec ce qui a été saisi, pour pouvoir réessayer.
   const keepInputRef = useRef(false);
 
+  // Resynchronise la saisie quand le contenu enregistré du jour change (autre
+  // appareil, temps réel...), pas à chaque nouvel objet identique : un simple
+  // rechargement en arrière-plan effaçait sinon ce qui était en cours de saisie.
+  const existingContent = JSON.stringify(
+    existing ? [existing.flow, existing.vaginal_pain, existing.symptoms, existing.mood, existing.note] : null
+  );
   useEffect(() => {
     if (keepInputRef.current) return;
     setFlow(existing?.flow ?? null);
@@ -51,7 +57,8 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
     setSymptoms(existing?.symptoms ?? []);
     setMood(existing?.mood ?? null);
     setNote(existing?.note ?? "");
-  }, [existing]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existingContent]);
 
   function toggleSymptom(s: string) {
     setSymptoms((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));

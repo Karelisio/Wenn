@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
+import { App } from "@capacitor/app";
 import { isNetworkError, supabase } from "../lib/supabase";
 import { useAuth } from "./AuthContext";
 import { CycleDataContext, type CycleDataValue } from "./CycleDataContext";
@@ -139,6 +140,7 @@ function withPendingMutations(
 
 export function CoupleProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [couple, setCouple] = useState<Couple | null>(null);
   const [otherPartyEmail, setOtherPartyEmail] = useState<string | null>(null);
   const [cycleDays, setCycleDays] = useState<CycleDay[]>([]);
@@ -148,6 +150,9 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
   const [offline, setOffline] = useState(false);
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
   const replayRef = useRef<Promise<boolean> | null>(null);
+  // Compte dont l'espace (ou l'absence d'espace) est affiché : les rechargements
+  // suivants pour ce même compte restent silencieux (voir loadCouple).
+  const shownUserIdRef = useRef<string | null>(null);
 
   // Rejoue dans l'ordre les écritures faites hors ligne. S'arrête à la première qui
   // échoue (réseau ou refus du serveur) : elle reste en file — rien n'en est retiré
@@ -188,8 +193,13 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
   // locale (voir saveDuoCache) pour que l'app reste utilisable hors ligne ; sans
   // copie, DuoGate propose de réessayer — jamais l'écran d'accueil, qui ferait
   // croire qu'il n'existe aucun espace (et pousserait à en recréer un).
+  //
+  // Dépend de l'id du compte, pas de l'objet `user` : celui-ci est recréé à chaque
+  // événement d'authentification (rafraîchissement du jeton, environ toutes les
+  // heures), ce qui relançait un chargement complet et démontait toute l'UI.
   const loadCouple = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
+      shownUserIdRef.current = null;
       setCouple(null);
       setCycleDays([]);
       setPartnerNotes([]);
@@ -199,12 +209,19 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       return;
     }
-    const userId = user.id;
+    // "Chargement..." seulement au premier chargement pour ce compte ; ensuite, les
+    // rechargements (retour au premier plan, retour du réseau...) sont silencieux et
+    // ne démontent plus l'écran en cours (feuille de saisie ouverte, mois affiché).
+    const firstLoad = shownUserIdRef.current !== userId;
 
-    function fallBack(error: { message: string }, network: boolean) {
+    const fallBack = (error: { message: string }, network: boolean) => {
       if (network) setOffline(true);
+      // Un espace est déjà affiché : on le garde, il est au moins aussi récent que
+      // la copie locale.
+      if (shownUserIdRef.current === userId) return;
       const cached = loadDuoCache(userId);
       if (cached) {
+        shownUserIdRef.current = userId;
         setCouple(cached.couple);
         setCycleDays(cached.cycleDays);
         setPartnerNotes(cached.partnerNotes);
@@ -213,9 +230,15 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
       } else {
         setLoadError(network ? OFFLINE_MESSAGE : error.message);
       }
-    }
+    };
 
-    setLoading(true);
+    if (firstLoad) {
+      setCouple(null);
+      setCycleDays([]);
+      setPartnerNotes([]);
+      setLoadError(null);
+      setLoading(true);
+    }
     try {
       // Réseau coupé : inutile d'attendre les nouvelles tentatives de supabase-js
       // (plusieurs secondes) avant d'afficher la copie locale.
@@ -239,6 +262,7 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
         // Réponse du serveur : aucun espace pour ce compte (jamais créé, quitté, ou
         // supprimé par la titulaire) — une copie locale restante serait périmée.
         clearDuoCache(userId);
+        shownUserIdRef.current = userId;
         setCouple(null);
         setCycleDays([]);
         setPartnerNotes([]);
@@ -272,6 +296,7 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
         loadedCouple.id,
         userId
       );
+      shownUserIdRef.current = userId;
       setCouple(loadedCouple);
       setCycleDays(days);
       setPartnerNotes(notes);
@@ -287,7 +312,7 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [user, replayPendingMutations]);
+  }, [userId, replayPendingMutations]);
 
   useEffect(() => {
     loadCouple();
@@ -301,6 +326,17 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
     };
     window.addEventListener("online", handleOnline);
     return () => window.removeEventListener("online", handleOnline);
+  }, [loadCouple]);
+
+  // Retour au premier plan : rechargement silencieux (changements faits sur l'autre
+  // téléphone entre-temps, écritures restées en attente).
+  useEffect(() => {
+    const listener = App.addListener("appStateChange", ({ isActive }) => {
+      if (isActive) void loadCouple();
+    });
+    return () => {
+      void listener.then((handle) => handle.remove());
+    };
   }, [loadCouple]);
 
   // Synchronisation temps réel : les deux comptes voient les mêmes données instantanément
@@ -365,13 +401,10 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
   }, [couple?.id]);
 
   // Email de l'autre personne du couple, pour afficher clairement l'état de
-  // la synchronisation dans Réglages ("connecté·e avec ...").
+  // la synchronisation dans Réglages ("connecté·e avec ..."). Dépend de son id
+  // seulement : pas de nouvelle requête à chaque rechargement de l'espace.
+  const otherId = !userId || !couple ? null : couple.owner_id === userId ? couple.partner_id : couple.owner_id;
   useEffect(() => {
-    if (!user || !couple) {
-      setOtherPartyEmail(null);
-      return;
-    }
-    const otherId = couple.owner_id === user.id ? couple.partner_id : couple.owner_id;
     if (!otherId) {
       setOtherPartyEmail(null);
       return;
@@ -388,13 +421,13 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [user, couple]);
+  }, [otherId]);
 
   // Copie locale tenue à jour à chaque changement (protège contre la perte d'accès
   // au compte/à l'app, et sert de source hors ligne à loadCouple ci-dessus).
   useEffect(() => {
-    if (user && couple) saveDuoCache(user.id, { couple, cycleDays, partnerNotes });
-  }, [user, couple, cycleDays, partnerNotes]);
+    if (userId && couple) saveDuoCache(userId, { couple, cycleDays, partnerNotes });
+  }, [userId, couple, cycleDays, partnerNotes]);
 
   async function createCouple(name: string) {
     if (!user) return { error: "Non connecté" };
@@ -479,8 +512,8 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
     if (!couple || !user) return { error: "Aucun cycle lié" };
     const previous = cycleDays.find((d) => d.date === date);
     const coupleId = couple.id;
-    const userId = user.id;
-    setCycleDays((prev) => mergeCycleDay(prev, date, fields, coupleId, userId));
+    const updatedBy = user.id;
+    setCycleDays((prev) => mergeCycleDay(prev, date, fields, coupleId, updatedBy));
     const result = await writeOrQueue({ type: "upsertCycleDay", date, fields });
     if (result.error) {
       setCycleDays((prev) =>
