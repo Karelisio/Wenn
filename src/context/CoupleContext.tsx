@@ -454,7 +454,11 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
   }
 
   async function joinCouple(inviteCode: string) {
-    const { data, error, status } = await supabase.rpc("join_couple", { p_invite_code: inviteCode.trim() });
+    // Les codes générés sont en minuscules ; le clavier du téléphone met souvent
+    // une majuscule d'office (et le champ affiche le code en capitales).
+    const { data, error, status } = await supabase.rpc("join_couple", {
+      p_invite_code: inviteCode.trim().toLowerCase(),
+    });
     if (error) return { error: errorMessage(error, status) };
     setCouple(data as Couple);
     await loadCouple();

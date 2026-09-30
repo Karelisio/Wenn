@@ -38,6 +38,8 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
   retard.
 - Correctif : se connecter avec le lien reçu par e-mail fonctionne aussi
   quand l'app était complètement fermée.
+- Le code d'invitation est accepté en majuscules comme en minuscules, et le
+  clavier ne le corrige plus automatiquement.
 
 ## v1.0.18 — 2026-09-20
 

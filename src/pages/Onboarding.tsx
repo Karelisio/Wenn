@@ -73,6 +73,9 @@ export default function Onboarding() {
               value={code}
               onChange={(e) => setCode(e.target.value)}
               placeholder="Code d'invitation"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               style={{ textTransform: "uppercase" }}
             />
             {error && <p style={{ color: "var(--md-sys-color-error)", fontSize: 13 }}>{error}</p>}
