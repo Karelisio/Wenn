@@ -31,6 +31,9 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
   taille d'affichage « Petite », et plus d'écran noir furtif au lancement.
 - Les polices de caractères sont maintenant incluses dans l'app : lancement
   plus rapide sur un réseau lent, et même apparence sans connexion.
+- Accessibilité : avec la lecture d'écran, chaque jour du calendrier est
+  annoncé en entier (date, règles, fenêtre fertile...) ainsi que les flèches
+  de mois. Dans le navigateur, la page peut de nouveau être agrandie.
 
 ## v1.0.19 — 2026-09-30
 

@@ -158,6 +158,15 @@ button, input, textarea, select {
   border-color: var(--md-sys-color-primary);
 }
 
+/* iOS (seul à connaître -webkit-touch-callout) zoome sur tout champ de moins de
+   16px au moment de le toucher : le viewport ne l'interdit plus (maximum-scale
+   retiré pour laisser agrandir la page), donc 16px là-bas. Android inchangé. */
+@supports (-webkit-touch-callout: none) {
+  .input {
+    font-size: 16px;
+  }
+}
+
 .chip {
   display: inline-flex;
   align-items: center;
