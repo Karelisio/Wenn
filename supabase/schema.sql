@@ -434,3 +434,77 @@ create policy "theme-images: owner upload"
   with check (bucket_id = 'theme-images' and (storage.foldername(name))[1] = auth.uid()::text);
 
 update storage.buckets set file_size_limit = 20971520 where id = 'theme-images';
+
+-- ---------------------------------------------------------------------------
+-- Performance RLS (2026-09-30, appliqué sur le projet) — voir aussi la fin de
+-- Orbit/supabase/schema.sql pour les tables orbit_*.
+-- ---------------------------------------------------------------------------
+-- Performance RLS (advisor Supabase « auth_rls_initplan » / « multiple_permissive_policies »
+-- / « unindexed_foreign_keys ») : même sémantique, mais auth.uid() évalué une
+-- seule fois par requête au lieu d'une fois par ligne, une seule policy
+-- permissive par (rôle, action), et un index sur chaque clé étrangère.
+
+-- couples
+alter policy "couples: insert as owner" on public.couples
+  with check (
+    (select auth.uid()) = owner_id
+    and partner_id is null
+    and not exists (
+      select 1 from public.couples c
+      where c.owner_id = (select auth.uid()) or c.partner_id = (select auth.uid())
+    )
+  );
+alter policy "couples: owner can update settings" on public.couples
+  using ((select auth.uid()) = owner_id);
+alter policy "couples: owner delete" on public.couples
+  using ((select auth.uid()) = owner_id);
+alter policy "couples: select member" on public.couples
+  using ((select auth.uid()) = owner_id or (select auth.uid()) = partner_id);
+
+-- cycle_days (Wenn)
+alter policy "cycle_days: owner delete" on public.cycle_days
+  using (exists (select 1 from public.couples c
+                 where c.id = cycle_days.couple_id and c.owner_id = (select auth.uid())));
+alter policy "cycle_days: owner insert" on public.cycle_days
+  with check (exists (select 1 from public.couples c
+                      where c.id = cycle_days.couple_id and c.owner_id = (select auth.uid())));
+alter policy "cycle_days: owner update" on public.cycle_days
+  using (exists (select 1 from public.couples c
+                 where c.id = cycle_days.couple_id and c.owner_id = (select auth.uid())));
+alter policy "cycle_days: select member" on public.cycle_days
+  using (exists (select 1 from public.couples c
+                 where c.id = cycle_days.couple_id
+                   and (c.owner_id = (select auth.uid()) or c.partner_id = (select auth.uid()))));
+
+-- partner_notes (Wenn)
+alter policy "partner_notes: author delete" on public.partner_notes
+  using (author_id = (select auth.uid()));
+alter policy "partner_notes: member insert" on public.partner_notes
+  with check (author_id = (select auth.uid())
+              and exists (select 1 from public.couples c
+                          where c.id = partner_notes.couple_id
+                            and (c.owner_id = (select auth.uid()) or c.partner_id = (select auth.uid()))));
+alter policy "partner_notes: select member" on public.partner_notes
+  using (exists (select 1 from public.couples c
+                 where c.id = partner_notes.couple_id
+                   and (c.owner_id = (select auth.uid()) or c.partner_id = (select auth.uid()))));
+
+-- profiles : les deux policies SELECT fusionnées en une seule
+alter policy "profiles: insert own" on public.profiles
+  with check ((select auth.uid()) = id);
+alter policy "profiles: update own" on public.profiles
+  using ((select auth.uid()) = id);
+drop policy if exists "profiles: select own" on public.profiles;
+drop policy if exists "profiles: select partner profile" on public.profiles;
+drop policy if exists "profiles: select own or partner" on public.profiles;
+create policy "profiles: select own or partner" on public.profiles
+  for select using (
+    (select auth.uid()) = id
+    or exists (select 1 from public.couples c
+               where (c.owner_id = (select auth.uid()) and c.partner_id = profiles.id)
+                  or (c.partner_id = (select auth.uid()) and c.owner_id = profiles.id))
+  );
+
+-- Index des clés étrangères
+create index if not exists cycle_days_updated_by_idx on public.cycle_days (updated_by);
+create index if not exists partner_notes_author_id_idx on public.partner_notes (author_id);
