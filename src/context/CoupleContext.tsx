@@ -139,7 +139,7 @@ function withPendingMutations(
 }
 
 export function CoupleProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const userId = user?.id ?? null;
   const [couple, setCouple] = useState<Couple | null>(null);
   const [otherPartyEmail, setOtherPartyEmail] = useState<string | null>(null);
@@ -560,6 +560,7 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
     canEdit: role === "owner",
     averageCycleLength: couple?.average_cycle_length ?? 28,
     averagePeriodLength: couple?.average_period_length ?? 5,
+    notificationsDaysBefore: profile?.notifications_days_before ?? null,
     cycleDays,
     partnerNotes,
     loading,

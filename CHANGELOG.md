@@ -29,6 +29,15 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
   jour entre minuit et 2 h du matin.
 - Si l'app se ferme toute seule, un rapport s'affiche ensuite dans Réglages
   pour aider à corriger le problème.
+- Le rappel de règles se recale tout seul quand la date prévue change (plus
+  besoin de réappuyer sur « Activer les rappels »). Réglages indique si la
+  date du rappel est déjà passée au lieu d'annoncer « Notification
+  programmée », et la carte n'est plus proposée au/à la partenaire.
+- Nouvelle carte « Alarmes et rappels » dans Réglages, tant que ce réglage
+  du téléphone n'est pas autorisé : sans lui, le rappel peut arriver en
+  retard.
+- Correctif : se connecter avec le lien reçu par e-mail fonctionne aussi
+  quand l'app était complètement fermée.
 
 ## v1.0.18 — 2026-09-20
 

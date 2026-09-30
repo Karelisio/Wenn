@@ -6,12 +6,19 @@ import { useCycleData } from "../context/CycleDataContext";
 import { useMode } from "../context/ModeContext";
 import { useThemeMode } from "../context/ThemeModeContext";
 import { useUiScale, UI_SCALE_OPTIONS } from "../context/UiScaleContext";
-import { supabase } from "../lib/supabase";
+import { isNetworkError, supabase } from "../lib/supabase";
 import { applyThemeFromImageUrl } from "../lib/materialYou";
 import { resizeImageToDataUrl } from "../lib/localStore";
 import { exportCycleDaysAsFile, parseBackupFile } from "../lib/backup";
 import { computeCyclePrediction } from "../lib/cyclePredictions";
-import { requestNotificationPermission, schedulePeriodNotification } from "../lib/notifications";
+import {
+  isExactAlarmGranted,
+  isPeriodReminderEnabled,
+  openExactAlarmSettings,
+  requestNotificationPermission,
+  schedulePeriodNotification,
+  setPeriodReminderEnabled,
+} from "../lib/notifications";
 import { checkForUpdate, downloadAndInstallUpdate, openUpdateDownload, type UpdateCheckResult } from "../lib/appUpdate";
 import { clearLastCrash, getLastCrash, type CrashReport } from "../lib/crashLog";
 import { Capacitor } from "@capacitor/core";
@@ -101,6 +108,37 @@ function UiScaleCard() {
   );
 }
 
+/**
+ * Active le rappel de règles sur cet appareil (reprogrammé ensuite automatiquement
+ * par ReminderSync à chaque changement de prédiction) et programme tout de suite le
+ * prochain. Le message ne dit « programmée » que si une notification l'a vraiment été.
+ */
+async function enablePeriodReminder(
+  nextPeriodStart: string | null,
+  daysBefore: number
+): Promise<{ enabled: boolean; message: string }> {
+  if (!Capacitor.isNativePlatform()) {
+    return {
+      enabled: false,
+      message: "Les notifications natives ne sont actives que dans l'app installée (Android/iOS).",
+    };
+  }
+  if (!(await requestNotificationPermission())) {
+    return { enabled: false, message: "Permission de notification refusée." };
+  }
+  setPeriodReminderEnabled(true);
+  if (!nextPeriodStart) {
+    return { enabled: true, message: "Pas encore assez de données pour prédire la prochaine notification." };
+  }
+  const scheduled = await schedulePeriodNotification(nextPeriodStart, daysBefore);
+  return {
+    enabled: true,
+    message: scheduled
+      ? "Notification programmée ✅"
+      : "La date du rappel est déjà passée : il sera programmé pour tes prochaines règles prévues.",
+  };
+}
+
 function NotificationsCard({
   daysBefore,
   onDaysBeforeChange,
@@ -109,10 +147,17 @@ function NotificationsCard({
 }: {
   daysBefore: number;
   onDaysBeforeChange: (n: number) => void;
-  onSave: () => void;
+  /** Renvoie si le rappel est bien activé (permission accordée). */
+  onSave: () => Promise<boolean>;
   status: string | null;
 }) {
   const [activated, setActivated] = useState(false);
+
+  // Le rappel reste actif d'une visite à l'autre (voir ReminderSync) : le bouton
+  // l'indique, et ne redevient actif que si le délai change.
+  useEffect(() => {
+    isPeriodReminderEnabled().then(setActivated);
+  }, []);
 
   return (
     <div className="card" style={{ marginBottom: 16 }}>
@@ -140,14 +185,48 @@ function NotificationsCard({
       <button
         className="btn btn-primary"
         disabled={activated}
-        onClick={() => {
-          onSave();
+        onClick={async () => {
           setActivated(true);
+          setActivated(await onSave());
         }}
       >
         {activated ? "Rappels activés ✅" : "Activer les rappels"}
       </button>
       {status && <p style={{ fontSize: 13, marginTop: 10 }}>{status}</p>}
+    </div>
+  );
+}
+
+/**
+ * Sans ce réglage système accordé (Android 12+), le rappel de règles est programmé
+ * en alarme inexacte et peut n'arriver qu'à la réouverture de l'app (voir
+ * isExactAlarmGranted dans lib/notifications.ts). N'apparaît que si le réglage
+ * manque, et disparaît une fois accordé.
+ */
+function ExactAlarmCard() {
+  const [granted, setGranted] = useState(true);
+
+  useEffect(() => {
+    isExactAlarmGranted().then(setGranted);
+  }, []);
+
+  if (granted) return null;
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <h3 className="section-title">Alarmes et rappels</h3>
+      <p style={{ marginTop: 0, fontSize: 13 }}>
+        Pour que le rappel de règles arrive à l'heure même si Wenn n'est pas ouverte, autorise "Alarmes et rappels"
+        dans les réglages système.
+      </p>
+      <button
+        className="btn btn-primary"
+        onClick={async () => {
+          if (await openExactAlarmSettings()) setGranted(true);
+        }}
+      >
+        Autoriser
+      </button>
     </div>
   );
 }
@@ -483,25 +562,24 @@ function DuoSettings() {
   }
 
   async function handleSaveNotifications() {
-    if (!user) return;
-    await supabase.from("profiles").update({ notifications_days_before: daysBefore }).eq("id", user.id);
+    if (!user) return false;
+    const { error, status } = await supabase
+      .from("profiles")
+      .update({ notifications_days_before: daysBefore })
+      .eq("id", user.id);
+    if (error) {
+      setNotifStatus(
+        isNetworkError(error, status)
+          ? "Pas de connexion internet : réessaie une fois en ligne."
+          : `Impossible d'enregistrer le délai : ${error.message}`
+      );
+      return false;
+    }
     await refreshProfile();
 
-    if (!Capacitor.isNativePlatform()) {
-      setNotifStatus("Les notifications natives ne sont actives que dans l'app installée (Android/iOS).");
-      return;
-    }
-    const granted = await requestNotificationPermission();
-    if (!granted) {
-      setNotifStatus("Permission de notification refusée.");
-      return;
-    }
-    if (prediction.nextPeriodStart) {
-      await schedulePeriodNotification(prediction.nextPeriodStart, daysBefore);
-      setNotifStatus("Notification programmée ✅");
-    } else {
-      setNotifStatus("Pas encore assez de données pour prédire la prochaine notification.");
-    }
+    const { enabled, message } = await enablePeriodReminder(prediction.nextPeriodStart, daysBefore);
+    setNotifStatus(message);
+    return enabled;
   }
 
   return (
@@ -538,12 +616,19 @@ function DuoSettings() {
 
       <UiScaleCard />
 
-      <NotificationsCard
-        daysBefore={daysBefore}
-        onDaysBeforeChange={setDaysBefore}
-        onSave={handleSaveNotifications}
-        status={notifStatus}
-      />
+      {/* Rappel « Tes règles... » : réservé à la titulaire, sans objet pour le/la partenaire. */}
+      {role === "owner" && (
+        <>
+          <NotificationsCard
+            daysBefore={daysBefore}
+            onDaysBeforeChange={setDaysBefore}
+            onSave={handleSaveNotifications}
+            status={notifStatus}
+          />
+
+          <ExactAlarmCard />
+        </>
+      )}
 
       <BackupCard
         cycleDays={cycleDays}
@@ -669,22 +754,9 @@ function SoloSettings() {
 
   async function handleSaveNotifications() {
     updateSettings({ notifications_days_before: daysBefore });
-
-    if (!Capacitor.isNativePlatform()) {
-      setNotifStatus("Les notifications natives ne sont actives que dans l'app installée (Android/iOS).");
-      return;
-    }
-    const granted = await requestNotificationPermission();
-    if (!granted) {
-      setNotifStatus("Permission de notification refusée.");
-      return;
-    }
-    if (prediction.nextPeriodStart) {
-      await schedulePeriodNotification(prediction.nextPeriodStart, daysBefore);
-      setNotifStatus("Notification programmée ✅");
-    } else {
-      setNotifStatus("Pas encore assez de données pour prédire la prochaine notification.");
-    }
+    const { enabled, message } = await enablePeriodReminder(prediction.nextPeriodStart, daysBefore);
+    setNotifStatus(message);
+    return enabled;
   }
 
   return (
@@ -714,6 +786,8 @@ function SoloSettings() {
         onSave={handleSaveNotifications}
         status={notifStatus}
       />
+
+      <ExactAlarmCard />
 
       <BackupCard cycleDays={cycleDays} coupleName="Mon cycle" canRestore onRestore={handleRestoreBackup} />
 

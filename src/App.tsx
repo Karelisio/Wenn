@@ -15,11 +15,13 @@ import Trends from "./pages/Trends";
 import Settings from "./pages/Settings";
 import BottomNav from "./components/BottomNav";
 import WidgetSync from "./components/WidgetSync";
+import ReminderSync from "./components/ReminderSync";
 
 function AppShell() {
   return (
     <div className="app-shell">
       <WidgetSync />
+      <ReminderSync />
       <Routes>
         <Route path="/" element={<Calendar />} />
         <Route path="/trends" element={<Trends />} />
