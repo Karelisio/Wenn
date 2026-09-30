@@ -8,6 +8,16 @@ import { ThemeModeProvider } from "./context/ThemeModeContext";
 import { UiScaleProvider } from "./context/UiScaleContext";
 import { applyThemeFromSeedColor, DEFAULT_SEED_COLOR } from "./lib/materialYou";
 import { initDeepLinks } from "./lib/deepLink";
+// Polices embarquées dans l'app (mêmes familles et graisses que l'ancien lien
+// Google Fonts) : plus de téléchargement bloquant au démarrage sur un réseau
+// lent, et plus de repli sur la police système hors connexion.
+import "@fontsource/nunito/400.css";
+import "@fontsource/nunito/600.css";
+import "@fontsource/nunito/700.css";
+import "@fontsource/nunito/800.css";
+import "@fontsource/quicksand/500.css";
+import "@fontsource/quicksand/600.css";
+import "@fontsource/quicksand/700.css";
 import "./styles/global.css";
 
 // Ce code tourne avant le montage de React : une exception ici ne serait

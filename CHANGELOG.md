@@ -29,6 +29,8 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 - Affichage : plus de bande noire en haut de l'écran (la barre avec l'heure
   reste visible au-dessus de l'app), plus de bandes sur les côtés avec la
   taille d'affichage « Petite », et plus d'écran noir furtif au lancement.
+- Les polices de caractères sont maintenant incluses dans l'app : lancement
+  plus rapide sur un réseau lent, et même apparence sans connexion.
 
 ## v1.0.19 — 2026-09-30
 
