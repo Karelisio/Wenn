@@ -5,6 +5,10 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 
 ## Non publié
 
+- Supprimer l'espace (titulaire) : l'avertissement précise maintenant que
+  toutes les données Orbit sont aussi effacées, l'app propose d'exporter une
+  sauvegarde avant, et il faut taper « SUPPRIMER » pour confirmer.
+
 ## v1.0.18 — 2026-09-20
 
 - La prédiction des règles se projette maintenant sur plusieurs cycles à

@@ -379,12 +379,30 @@ function DuoSettings() {
     }
   }
 
+  // Côté titulaire, leave_couple() supprime l'espace EN CASCADE : l'historique Wenn,
+  // mais aussi toutes les données Orbit du couple (même projet Supabase, même
+  // espace). D'où l'avertissement complet, l'export proposé avant, et la
+  // confirmation à taper (un simple "OK" se valide trop facilement par erreur).
+  async function confirmOwnerDeletion(): Promise<boolean> {
+    if (cycleDays.length > 0 && window.confirm("Exporter une sauvegarde avant de supprimer ?")) {
+      try {
+        await exportCycleDaysAsFile(cycleDays, couple?.name ?? "");
+      } catch {
+        window.alert("L'export a échoué : la suppression est annulée.");
+        return false;
+      }
+    }
+    const typed = window.prompt("Pour confirmer la suppression définitive, tape SUPPRIMER :");
+    return typed?.trim().toLowerCase() === "supprimer";
+  }
+
   async function handleLeaveCouple() {
     const warning =
       role === "owner"
-        ? "Quitter supprimera définitivement cet espace et tout son historique (règles, symptômes, notes). Le lien avec ton/ta partenaire sera aussi rompu. Continuer ?"
+        ? "Supprimer cet espace effacera définitivement tout l'historique Wenn (règles, symptômes, notes) ET toutes les données Orbit (événements, tâches, budget, journal), qui utilise le même espace partagé. Le lien avec ton/ta partenaire sera aussi rompu. Continuer ?"
         : "Tu vas te délier de cet espace (tu pourras en rejoindre un autre ou en créer un). Les données de la titulaire ne sont pas affectées. Continuer ?";
     if (!window.confirm(warning)) return;
+    if (role === "owner" && !(await confirmOwnerDeletion())) return;
     setLeaving(true);
     const { error } = await leaveCouple();
     setLeaving(false);
