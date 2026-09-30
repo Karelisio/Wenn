@@ -358,8 +358,12 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!couple) return;
 
+    // Nom unique à chaque abonnement : supabase.channel() renvoie le canal existant
+    // s'il porte déjà ce nom. Lors d'un remontage rapide (retrait de l'ancien canal
+    // pas encore terminé), les .on() ci-dessous visaient alors un canal déjà abonné
+    // et levaient une exception qui faisait tomber toute l'app.
     const channel = supabase
-      .channel(`couple-${couple.id}`)
+      .channel(`couple-${couple.id}-${crypto.randomUUID()}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "cycle_days", filter: `couple_id=eq.${couple.id}` },
