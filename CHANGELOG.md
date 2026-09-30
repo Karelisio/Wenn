@@ -23,6 +23,12 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
   mois actuel). Les données se mettent aussi à jour en revenant dans l'app.
 - Une suppression faite sur l'autre téléphone apparaît maintenant tout de
   suite, sans avoir à relancer l'app.
+- Les widgets se mettent à jour tout seuls chaque jour, même sans ouvrir
+  l'app (le compte à rebours restait figé).
+- Correctif : le nombre de jours avant les règles pouvait être décalé d'un
+  jour entre minuit et 2 h du matin.
+- Si l'app se ferme toute seule, un rapport s'affiche ensuite dans Réglages
+  pour aider à corriger le problème.
 
 ## v1.0.18 — 2026-09-20
 

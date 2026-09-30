@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   addMonths,
+  differenceInCalendarDays,
   eachDayOfInterval,
   endOfMonth,
   endOfWeek,
@@ -8,6 +9,7 @@ import {
   isSameDay,
   isSameMonth,
   isToday,
+  parseISO,
   startOfMonth,
   startOfWeek,
 } from "date-fns";
@@ -91,8 +93,10 @@ export default function Calendar() {
     return classes.join(" ");
   }
 
+  // Jours calendaires entre dates locales : un Math.ceil sur new Date("aaaa-mm-jj")
+  // (lu à minuit UTC) se décalait d'un jour entre 0 h et 2 h du matin.
   const daysUntilNextPeriod = prediction.nextPeriodStart
-    ? Math.ceil((new Date(prediction.nextPeriodStart).getTime() - Date.now()) / 86400000)
+    ? differenceInCalendarDays(parseISO(prediction.nextPeriodStart), new Date())
     : null;
 
   return (
@@ -121,7 +125,7 @@ export default function Calendar() {
             </h2>
             <p style={{ margin: "8px 0 0", fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
               Ovulation estimée le{" "}
-              {prediction.ovulationDate && format(new Date(prediction.ovulationDate), "d MMMM", { locale: fr })}
+              {prediction.ovulationDate && format(parseISO(prediction.ovulationDate), "d MMMM", { locale: fr })}
             </p>
           </>
         ) : (
