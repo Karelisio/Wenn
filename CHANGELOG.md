@@ -21,6 +21,8 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 - Correctif : l'app se rechargeait d'elle-même environ toutes les heures (la
   fiche du jour en cours de saisie se fermait et le calendrier revenait au
   mois actuel). Les données se mettent aussi à jour en revenant dans l'app.
+- Une suppression faite sur l'autre téléphone apparaît maintenant tout de
+  suite, sans avoir à relancer l'app.
 
 ## v1.0.18 — 2026-09-20
 

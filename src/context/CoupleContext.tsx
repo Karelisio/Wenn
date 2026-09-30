@@ -393,6 +393,18 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
         { event: "UPDATE", schema: "public", table: "couples", filter: `id=eq.${couple.id}` },
         (payload) => setCouple(payload.new as Couple)
       )
+      // Supabase ne livre pas les DELETE sur un abonnement filtré (couple_id=eq...) et
+      // l'ancienne ligne n'y contient que la clé primaire : les suppressions sont donc
+      // écoutées sans filtre, et seules les lignes connues localement sont retirées
+      // (la copie locale suit via l'effet saveDuoCache).
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "cycle_days" }, (payload) => {
+        const id = (payload.old as Partial<CycleDay>).id;
+        if (id) setCycleDays((prev) => (prev.some((d) => d.id === id) ? prev.filter((d) => d.id !== id) : prev));
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "partner_notes" }, (payload) => {
+        const id = (payload.old as Partial<PartnerNote>).id;
+        if (id) setPartnerNotes((prev) => (prev.some((n) => n.id === id) ? prev.filter((n) => n.id !== id) : prev));
+      })
       .subscribe();
 
     return () => {
