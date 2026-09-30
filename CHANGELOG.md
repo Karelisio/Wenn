@@ -15,6 +15,10 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
   de l'historique (et les dates affichées par les widgets). Si des
   modifications n'ont pas encore pu être envoyées, l'app prévient avant de
   se déconnecter.
+- Sauvegarde : l'export contient aussi les mots doux, et le fichier porte la
+  bonne date (plus celle de la veille après minuit). À la restauration, une
+  entrée abîmée est ignorée au lieu d'effacer ce qui existe déjà, et l'app
+  indique combien de jours ont été restaurés ou ignorés.
 
 ## v1.0.19 — 2026-09-30
 

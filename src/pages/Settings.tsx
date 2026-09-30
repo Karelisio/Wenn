@@ -9,7 +9,8 @@ import { useUiScale, UI_SCALE_OPTIONS } from "../context/UiScaleContext";
 import { isNetworkError, supabase } from "../lib/supabase";
 import { applyThemeFromImageUrl } from "../lib/materialYou";
 import { resizeImageToDataUrl } from "../lib/localStore";
-import { exportCycleDaysAsFile, parseBackupFile } from "../lib/backup";
+import { exportBackupFile, parseBackupFile } from "../lib/backup";
+import { restoreBackup, restoreSummary, type ParsedBackup, type RestoreReport } from "../lib/backupFormat";
 import { computeCyclePrediction } from "../lib/cyclePredictions";
 import {
   isExactAlarmGranted,
@@ -23,6 +24,7 @@ import { checkForUpdate, downloadAndInstallUpdate, openUpdateDownload, type Upda
 import { clearLastCrash, getLastCrash, type CrashReport } from "../lib/crashLog";
 import { Capacitor } from "@capacitor/core";
 import ThemeModeCard from "../components/ThemeModeCard";
+import type { CycleDay, PartnerNote } from "../types";
 
 export default function Settings() {
   const { mode } = useMode();
@@ -231,16 +233,23 @@ function ExactAlarmCard() {
   );
 }
 
+type RestoreHandler = (
+  backup: ParsedBackup,
+  onProgress: (done: number, total: number) => void
+) => Promise<RestoreReport>;
+
 function BackupCard({
   cycleDays,
+  partnerNotes,
   coupleName,
   canRestore,
   onRestore,
 }: {
-  cycleDays: import("../types").CycleDay[];
+  cycleDays: CycleDay[];
+  partnerNotes: PartnerNote[];
   coupleName: string;
   canRestore: boolean;
-  onRestore: (entries: import("../lib/backup").BackupEntry[]) => Promise<void>;
+  onRestore: RestoreHandler;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -251,7 +260,7 @@ function BackupCard({
     setExporting(true);
     setStatus(null);
     try {
-      await exportCycleDaysAsFile(cycleDays, coupleName);
+      await exportBackupFile(cycleDays, partnerNotes, coupleName);
     } catch {
       setStatus("Échec de l'export");
     } finally {
@@ -259,13 +268,16 @@ function BackupCard({
     }
   }
 
+  // Le résultat annoncé est celui réellement obtenu : entrées invalides (écartées à
+  // la lecture) et écritures refusées sont comptées à part, au lieu d'annoncer
+  // « N jour(s) restauré(s) » quoi qu'il arrive.
   async function handleFile(file: File) {
     setRestoring(true);
     setStatus(null);
     try {
-      const entries = await parseBackupFile(file);
-      await onRestore(entries);
-      setStatus(`${entries.length} jour(s) restauré(s) ✅`);
+      const backup = await parseBackupFile(file);
+      const report = await onRestore(backup, (done, total) => setStatus(`Restauration… ${done}/${total}`));
+      setStatus(restoreSummary(report));
     } catch (err) {
       setStatus(err instanceof Error ? err.message : "Échec de la restauration");
     } finally {
@@ -293,6 +305,9 @@ function BackupCard({
               hidden
               onChange={(e) => {
                 const file = e.target.files?.[0];
+                // Vidé tout de suite : sinon choisir à nouveau le même fichier (après
+                // une restauration incomplète) ne déclencherait plus rien.
+                e.target.value = "";
                 if (file) handleFile(file);
               }}
             />
@@ -456,8 +471,17 @@ function CrashCard() {
 function DuoSettings() {
   const { user, profile, signOut, refreshProfile } = useAuth();
   const { couple, role, otherPartyEmail, leaveCouple, renameCouple } = useCouple();
-  const { cycleDays, averageCycleLength, averagePeriodLength, canEdit, upsertCycleDay, offline, pendingSyncCount } =
-    useCycleData();
+  const {
+    cycleDays,
+    partnerNotes,
+    averageCycleLength,
+    averagePeriodLength,
+    canEdit,
+    upsertCycleDay,
+    addPartnerNote,
+    offline,
+    pendingSyncCount,
+  } = useCycleData();
   const { isDark } = useThemeMode();
   const [uploading, setUploading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -509,20 +533,14 @@ function DuoSettings() {
     setUploading(false);
   }
 
-  async function handleRestoreBackup(entries: { date: string; flow: import("../types").FlowIntensity | null; vaginal_pain: import("../types").FlowIntensity | null; symptoms: string[]; mood: string | null; note: string | null }[]) {
-    for (const entry of entries) {
-      const { error } = await upsertCycleDay(entry.date, {
-        flow: entry.flow,
-        vaginal_pain: entry.vaginal_pain,
-        symptoms: entry.symptoms,
-        mood: entry.mood,
-        note: entry.note,
-      });
-      // Refus du serveur (hors ligne, l'écriture est mise en file et compte comme réussie) :
-      // BackupCard affiche l'erreur au lieu d'annoncer une restauration complète.
-      if (error) throw new Error(error);
-    }
-  }
+  // Mots doux : seuls ceux écrits par ce compte peuvent être recréés (la base
+  // n'accepte un mot doux que de son auteur) ; ceux déjà présents sont gardés tels quels.
+  const handleRestoreBackup: RestoreHandler = (backup, onProgress) =>
+    restoreBackup(backup, {
+      upsertCycleDay,
+      notes: user ? { existing: partnerNotes, userId: user.id, add: addPartnerNote } : undefined,
+      onProgress,
+    });
 
   // Côté titulaire, leave_couple() supprime l'espace EN CASCADE : l'historique Wenn,
   // mais aussi toutes les données Orbit du couple (même projet Supabase, même
@@ -531,7 +549,7 @@ function DuoSettings() {
   async function confirmOwnerDeletion(): Promise<boolean> {
     if (cycleDays.length > 0 && window.confirm("Exporter une sauvegarde avant de supprimer ?")) {
       try {
-        await exportCycleDaysAsFile(cycleDays, couple?.name ?? "");
+        await exportBackupFile(cycleDays, partnerNotes, couple?.name ?? "");
       } catch {
         window.alert("L'export a échoué : la suppression est annulée.");
         return false;
@@ -632,6 +650,7 @@ function DuoSettings() {
 
       <BackupCard
         cycleDays={cycleDays}
+        partnerNotes={partnerNotes}
         coupleName={couple?.name ?? ""}
         canRestore={canEdit}
         onRestore={handleRestoreBackup}
@@ -740,17 +759,9 @@ function SoloSettings() {
     }
   }
 
-  async function handleRestoreBackup(entries: { date: string; flow: import("../types").FlowIntensity | null; vaginal_pain: import("../types").FlowIntensity | null; symptoms: string[]; mood: string | null; note: string | null }[]) {
-    for (const entry of entries) {
-      await upsertCycleDay(entry.date, {
-        flow: entry.flow,
-        vaginal_pain: entry.vaginal_pain,
-        symptoms: entry.symptoms,
-        mood: entry.mood,
-        note: entry.note,
-      });
-    }
-  }
+  // Pas de mots doux en mode solo : ceux d'une sauvegarde duo restent dans le fichier.
+  const handleRestoreBackup: RestoreHandler = (backup, onProgress) =>
+    restoreBackup(backup, { upsertCycleDay, onProgress });
 
   async function handleSaveNotifications() {
     updateSettings({ notifications_days_before: daysBefore });
@@ -789,7 +800,13 @@ function SoloSettings() {
 
       <ExactAlarmCard />
 
-      <BackupCard cycleDays={cycleDays} coupleName="Mon cycle" canRestore onRestore={handleRestoreBackup} />
+      <BackupCard
+        cycleDays={cycleDays}
+        partnerNotes={[]}
+        coupleName="Mon cycle"
+        canRestore
+        onRestore={handleRestoreBackup}
+      />
 
       <CrashCard />
 
