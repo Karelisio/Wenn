@@ -19,6 +19,13 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
   bonne date (plus celle de la veille après minuit). À la restauration, une
   entrée abîmée est ignorée au lieu d'effacer ce qui existe déjà, et l'app
   indique combien de jours ont été restaurés ou ignorés.
+- Réglages : le délai du rappel de règles affiché est bien celui enregistré
+  (il pouvait rester sur « 2 jours avant »). Les boutons « Copier » disent
+  quand la copie est impossible, et le choix d'une image de thème ne reste
+  plus bloqué sur « Chargement... ».
+- Un double appui sur « Ajouter » n'envoie plus deux fois le même mot doux.
+- Le jour d'aujourd'hui reste entouré dans le calendrier, aussi pendant la
+  fenêtre fertile et les jours de règles moyennes ou abondantes.
 
 ## v1.0.19 — 2026-09-30
 

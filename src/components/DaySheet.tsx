@@ -38,6 +38,8 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
   const [customSymptom, setCustomSymptom] = useState("");
   const [customMood, setCustomMood] = useState("");
   const [saving, setSaving] = useState(false);
+  const [addingNote, setAddingNote] = useState(false);
+  const addingNoteRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   // Vrai dès que l'utilisatrice a touché à la saisie (ou tenté de l'enregistrer) :
   // à partir de là, elle n'est plus jamais remplacée par la version enregistrée.
@@ -111,13 +113,22 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
     onClose();
   }
 
+  // Un seul envoi à la fois : un double appui sur « Ajouter » envoyait le même mot
+  // doux deux fois (la référence bloque même avant que le bouton soit grisé).
   async function handleAddPartnerNote() {
     const message = newPartnerNote.trim();
-    if (!message) return;
+    if (!message || addingNoteRef.current) return;
+    addingNoteRef.current = true;
+    setAddingNote(true);
     setError(null);
-    const result = await addPartnerNote(date, message);
-    if (result.error) setError(result.error);
-    else setNewPartnerNote("");
+    try {
+      const result = await addPartnerNote(date, message);
+      if (result.error) setError(result.error);
+      else setNewPartnerNote("");
+    } finally {
+      addingNoteRef.current = false;
+      setAddingNote(false);
+    }
   }
 
   return (
@@ -295,7 +306,11 @@ export default function DaySheet({ date, onClose }: { date: string; onClose: () 
                 value={newPartnerNote}
                 onChange={(e) => setNewPartnerNote(e.target.value)}
               />
-              <button className="btn btn-secondary" onClick={handleAddPartnerNote}>
+              <button
+                className="btn btn-secondary"
+                onClick={handleAddPartnerNote}
+                disabled={addingNote || !newPartnerNote.trim()}
+              >
                 Ajouter
               </button>
             </div>
