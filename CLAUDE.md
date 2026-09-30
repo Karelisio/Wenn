@@ -58,6 +58,19 @@ CHANGELOG.md           source des notes de version (voir workflow ci-dessous)
 - `couples.name` est renommable par la titulaire (Réglages → Couple lié).
 - `leave_couple()` (RPC) permet de quitter un espace Duo pour changer de rôle —
   utile en test, la titulaire ne peut pas redevenir partenaire autrement.
+  **Attention : côté titulaire, il supprime la ligne `couples`, ce qui efface
+  en cascade tout l'historique Wenn ET toutes les données Orbit** (même
+  projet, FK `on delete cascade`) — les deux apps exigent donc de taper
+  « SUPPRIMER » après un avertissement qui cite les deux. Ne jamais le tester
+  sur le vrai couple.
+- Sécurité de `couples` (2026-09-30) : `join_couple`/`leave_couple`
+  exécutables par `authenticated` seulement (plus `anon`/`PUBLIC`),
+  `join_couple` refuse une session absente et compare le code en minuscules ;
+  un trigger empêche de modifier `owner_id`/`partner_id`/`invite_code` par un
+  UPDATE direct depuis l'API (seules les fonctions SECURITY DEFINER le
+  peuvent) ; un compte n'appartient qu'à un seul espace (index uniques +
+  policy INSERT). Vérifier avec les advisors Supabase (type `security`) après
+  toute nouvelle fonction : `revoke execute ... from public, anon` explicite.
 
 ## Widgets Android (deux, au choix dans le sélecteur de widgets)
 
@@ -74,6 +87,33 @@ chaque changement de prédiction :
 Toute nouvelle donnée à exposer à un widget suit ce chemin : calculer dans
 `WidgetSync.tsx` → ajouter un champ à `WidgetDataPlugin.update()` (JS + Java) →
 lire depuis `SharedPreferences` dans le(s) `AppWidgetProvider`.
+
+Les deux entiers ci-dessus ne sont plus qu'un repli : le JS pousse aussi
+`nextPeriodStart`/`lastPeriodStart`/`averageCycleLength`, et
+`WennWidgetProvider.readState()` recalcule jours restants et progression à
+partir de la date du jour à chaque rendu (`updatePeriodMillis` = 1 h), avec
+exactement les mêmes calculs que le JS — sinon le widget restait figé tant
+que l'app n'était pas rouverte. Comme dans Orbit, **chaque mise à jour de
+widget est enveloppée `try { … } catch (Throwable ignored)`** (le rendu tourne
+dans le processus de l'app), `CrashLogPlugin` (installé en premier dans
+`MainActivity`) garde la dernière fermeture brutale pour Réglages, et un
+`ErrorBoundary` entoure la racine React.
+
+## Hors ligne (mode Duo) — supabase-js ne lève pas d'exception
+
+Sans réseau, supabase-js **renvoie** `{ error, status: 0 }` au lieu de lever :
+toute lecture/écriture doit tester `error` (`isNetworkError()` dans
+`lib/supabase.ts`), jamais compter sur un `catch`. `CoupleContext` retombe
+alors sur la copie locale (`saveDuoCache`), n'affiche jamais l'onboarding à
+cause d'une erreur (écran « Réessayer » s'il n'y a pas de copie), met les
+écritures en file (`offlineQueue.ts`, rejouée dans l'ordre avant chaque
+rechargement) et dépend de `user?.id`, pas de l'objet `user` (recréé à chaque
+rafraîchissement de jeton, ce qui démontait toute l'UI). La permission
+`ACCESS_NETWORK_STATE` est nécessaire pour que la WebView tienne
+`navigator.onLine` et l'événement `online` à jour. Les DELETE temps réel sont
+écoutés sans filtre (Supabase ne les livre pas sur un abonnement filtré).
+`npm run check` (tsc + `scripts/smoke-test.ts`, prédiction du cycle) à lancer
+avant chaque push.
 
 ## Mise à jour in-app — piège CORS déjà résolu, ne pas régresser
 
