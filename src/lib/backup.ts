@@ -2,6 +2,7 @@ import { Capacitor } from "@capacitor/core";
 import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
 import type { Couple, CycleDay, FlowIntensity, PartnerNote } from "../types";
+import { removeLocalKeysWithPrefix } from "./localStore";
 
 export interface BackupEntry {
   date: string;
@@ -135,4 +136,13 @@ export function clearDuoCache(userId: string): void {
   } catch {
     // stockage indisponible : rien à effacer
   }
+}
+
+/**
+ * Efface la copie locale de tous les comptes (déconnexion) : tout l'historique de
+ * cycle et les mots doux ne doivent pas rester sur le téléphone, en particulier
+ * celui du/de la partenaire.
+ */
+export function clearAllDuoCaches(): void {
+  removeLocalKeysWithPrefix(DUO_CACHE_PREFIX);
 }

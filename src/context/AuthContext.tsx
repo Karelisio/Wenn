@@ -1,6 +1,9 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
+import { clearAllDuoCaches } from "../lib/backup";
+import { clearAllPendingMutations, countAllPendingMutations } from "../lib/offlineQueue";
+import { clearWidgets } from "../lib/widgetSync";
 import type { Profile } from "../types";
 
 interface AuthContextValue {
@@ -53,7 +56,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
+    // Écritures faites hors ligne pas encore envoyées : elles sont effacées avec le
+    // reste ci-dessous, donc perdues. On prévient avant.
+    const pending = countAllPendingMutations();
+    if (
+      pending > 0 &&
+      !window.confirm(
+        pending > 1
+          ? `${pending} modifications pas encore envoyées seront perdues. Te déconnecter quand même ?`
+          : "1 modification pas encore envoyée sera perdue. Te déconnecter quand même ?"
+      )
+    ) {
+      return;
+    }
     await supabase.auth.signOut();
+    // Rien de l'espace partagé ne reste sur le téléphone après la déconnexion : ni la
+    // copie locale (tout l'historique et les mots doux), ni la file d'attente, ni les
+    // dates affichées par les widgets.
+    clearAllDuoCaches();
+    clearAllPendingMutations();
+    clearWidgets();
   }
 
   async function refreshProfile() {

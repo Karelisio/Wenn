@@ -11,6 +11,10 @@ Historique des changements de Wenn, visibles directement dans l'app (Réglages
 - Correctif : dans la fiche du jour, ce qui était en cours de saisie pouvait
   être remplacé d'un coup par la version enregistrée (mise à jour reçue en
   arrière-plan). Une fois un choix fait, la saisie n'est plus touchée.
+- Se déconnecter ou quitter l'espace efface maintenant du téléphone la copie
+  de l'historique (et les dates affichées par les widgets). Si des
+  modifications n'ont pas encore pu être envoyées, l'app prévient avant de
+  se déconnecter.
 
 ## v1.0.19 — 2026-09-30
 

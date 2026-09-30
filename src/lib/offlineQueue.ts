@@ -1,4 +1,5 @@
 import type { CycleDay } from "../types";
+import { localKeysWithPrefix, removeLocalKeysWithPrefix } from "./localStore";
 
 interface QueuedCycleDayUpsert {
   type: "upsertCycleDay";
@@ -27,7 +28,8 @@ const QUEUE_PREFIX = "wenn-duo-queue-";
 function readQueue(coupleId: string): QueuedMutation[] {
   try {
     const raw = localStorage.getItem(`${QUEUE_PREFIX}${coupleId}`);
-    return raw ? (JSON.parse(raw) as QueuedMutation[]) : [];
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? (parsed as QueuedMutation[]) : [];
   } catch {
     return [];
   }
@@ -56,4 +58,26 @@ export function removeMutation(coupleId: string, id: string): void {
     coupleId,
     readQueue(coupleId).filter((m) => m.id !== id)
   );
+}
+
+/** Écritures en attente sur cet appareil, tous espaces confondus (avertissement avant déconnexion). */
+export function countAllPendingMutations(): number {
+  return localKeysWithPrefix(QUEUE_PREFIX).reduce(
+    (total, key) => total + readQueue(key.slice(QUEUE_PREFIX.length)).length,
+    0
+  );
+}
+
+/** Vide la file d'un espace quitté ou supprimé : ses écritures seraient refusées de toute façon. */
+export function clearPendingMutations(coupleId: string): void {
+  try {
+    localStorage.removeItem(`${QUEUE_PREFIX}${coupleId}`);
+  } catch {
+    // stockage indisponible : rien à effacer
+  }
+}
+
+/** Vide toutes les files d'attente (déconnexion). */
+export function clearAllPendingMutations(): void {
+  removeLocalKeysWithPrefix(QUEUE_PREFIX);
 }

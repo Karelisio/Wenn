@@ -5,12 +5,14 @@ import { useAuth } from "./AuthContext";
 import { CycleDataContext, type CycleDataValue } from "./CycleDataContext";
 import { saveDuoCache, loadDuoCache, clearDuoCache } from "../lib/backup";
 import {
+  clearPendingMutations,
   enqueueMutation,
   getPendingMutations,
   removeMutation,
   type MutationPayload,
   type QueuedMutation,
 } from "../lib/offlineQueue";
+import { clearWidgets } from "../lib/widgetSync";
 import type { Couple, CycleDay, FlowIntensity, PartnerNote } from "../types";
 
 interface CoupleContextValue {
@@ -260,7 +262,10 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
       const loadedCouple = data as Couple | null;
       if (!loadedCouple) {
         // Réponse du serveur : aucun espace pour ce compte (jamais créé, quitté, ou
-        // supprimé par la titulaire) — une copie locale restante serait périmée.
+        // supprimé par la titulaire) — une copie locale restante serait périmée, et
+        // les écritures encore en attente pour cet espace seraient refusées.
+        const staleCoupleId = loadDuoCache(userId)?.couple?.id;
+        if (staleCoupleId) clearPendingMutations(staleCoupleId);
         clearDuoCache(userId);
         shownUserIdRef.current = userId;
         setCouple(null);
@@ -487,10 +492,16 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
   async function leaveCouple() {
     const { error, status } = await supabase.rpc("leave_couple");
     if (error) return { error: errorMessage(error, status) };
+    // Plus rien de cet espace ne reste sur le téléphone : copie locale (tout
+    // l'historique et les mots doux), écritures en attente (désormais refusées)
+    // et dates affichées par les widgets.
     if (user) clearDuoCache(user.id);
+    if (couple) clearPendingMutations(couple.id);
+    clearWidgets();
     setCouple(null);
     setCycleDays([]);
     setPartnerNotes([]);
+    setPendingSyncCount(0);
     return { error: null };
   }
 
