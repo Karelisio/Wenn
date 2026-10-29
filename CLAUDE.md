@@ -24,13 +24,17 @@ répondre en français, court et direct.**
 src/
   context/       CoupleContext (mode Duo), SoloContext (mode Solo, localStorage),
                  CycleDataContext (façade commune aux deux), AuthContext, ModeContext,
-                 ThemeModeContext (clair/sombre/système)
+                 ThemeModeContext (clair/sombre/système), UiScaleContext (taille
+                 d'affichage, réglage par appareil comme ThemeModeContext)
   pages/         Calendar, Trends, Settings, Login, Onboarding, ModeSelect
   components/    DaySheet (saisie du jour), BottomNav, WidgetSync (pousse les
                  données vers les widgets Android), OrbitMark (logo)
-  lib/           cyclePredictions (prédiction cycle/ovulation), backup (export/
-                 import JSON), appUpdate (mise à jour in-app), widgetSync,
-                 materialYou, wallpaperColor, notifications, supabase, deepLink
+  lib/           cyclePredictions (prédiction cycle/ovulation), backup + backupFormat
+                 (export/import JSON, validation des entrées), appUpdate (mise à
+                 jour in-app), widgetSync, materialYou, wallpaperColor,
+                 notifications, supabase, deepLink, offlineQueue (file des
+                 écritures hors ligne, mode Duo), localStore, crashLog (dernière
+                 fermeture brutale, lu par Réglages)
   types/index.ts Types + constantes partagées (emoji, labels, options de saisie)
 
 android/app/src/main/java/io/karelisio/wenn/
@@ -40,6 +44,8 @@ android/app/src/main/java/io/karelisio/wenn/
   WennOrbitWidgetProvider.java  widget "Orbite" (anneau + point, motif de l'icône)
   ApkInstallerPlugin.java  lance l'installeur système pour l'APK téléchargé
   WallpaperColorPlugin.java lit la couleur dominante du fond d'écran (thème)
+  CrashLogPlugin.java      enregistre la dernière fermeture brutale (installé en
+                           premier dans MainActivity, lu par Réglages)
 
 supabase/schema.sql   schéma complet + policies RLS + migrations additives en fin de fichier
 CHANGELOG.md           source des notes de version (voir workflow ci-dessous)
@@ -52,9 +58,14 @@ CHANGELOG.md           source des notes de version (voir workflow ci-dessous)
   (`owner`) lit/écrit tout ; le/la **partenaire** (`partner`) lit tout et peut
   ajouter des notes (`partner_notes`), jamais modifier les données de cycle.
   RLS Postgres fait respecter ça, pas seulement l'UI.
-- `CycleDay` (table `cycle_days`) : `flow`, `vaginal_pain` (label affiché
-  "Douleurs", même 3 niveaux léger/moyen/abondant que `flow`), `symptoms[]`
-  (inclut sécrétions, rapport sexuel, autre douleur), `mood`, `note`.
+- `CycleDay` (table `cycle_days`) : `flow` (spotting/léger/moyen/abondant),
+  `vaginal_pain` (label affiché "Douleurs", 3 niveaux léger/moyen/abondant,
+  sans spotting), `symptoms[]` (inclut sécrétions, rapport sexuel, autre
+  douleur), `mood`, `note`. `symptoms` et `mood` acceptent aussi du texte libre
+  en plus des options fixes (bouton "Ajouter" dans `DaySheet.tsx`) : le
+  discriminant est `(OPTIONS as readonly string[]).includes(valeur)` — une
+  valeur absente de la liste fixe est une entrée libre, affichée sur le
+  calendrier avec un marqueur générique (📝 symptôme, 💭 humeur).
 - `couples.name` est renommable par la titulaire (Réglages → Couple lié).
 - `leave_couple()` (RPC) permet de quitter un espace Duo pour changer de rôle —
   utile en test, la titulaire ne peut pas redevenir partenaire autrement.
@@ -126,7 +137,10 @@ Si un futur refactor réintroduit `fetch()` ici, le téléchargement recassera.
 
 ## Workflow Git/CI — à suivre à chaque changement
 
-La branche de travail est `claude/wenn-cycle-tracking-app-km6x7a`. Le push sur
+La branche de travail est `claude/widget-loading-redirect-8ugj85` (nom propre à
+cette session de travail — vérifier avec `git branch --show-current` au début
+d'une nouvelle session et mettre à jour les 3 occurrences ci-dessous si ça a
+changé). Le push sur
 `main` déclenche le build + un **auto-tag patch** + une **Release GitHub**
 (APK signé). Le workflow lit la section `## Non publié` de `CHANGELOG.md`
 comme notes de release, et **seulement après** un APK signé construit et la
@@ -146,7 +160,7 @@ fenêtre de travail entre en conflit sur `CHANGELOG.md`.** Séquence standard :
 2. Commiter, pousser sur la branche de travail (jamais directement sur `main`).
 3. Lancer le workflow sur cette branche :
    `mcp__github__actions_run_trigger` (workflow `build-android.yml`,
-   `ref: claude/wenn-cycle-tracking-app-km6x7a`), attendre ~110s, vérifier le
+   `ref: claude/widget-loading-redirect-8ugj85`), attendre ~110s, vérifier le
    run via `mcp__github__actions_list` (`conclusion: success`). Ne jamais
    pousser sur `main` sans ce vert — le code natif Android ne peut pas être
    testé autrement depuis cet environnement.
@@ -157,7 +171,7 @@ fenêtre de travail entre en conflit sur `CHANGELOG.md`.** Séquence standard :
    `git add CHANGELOG.md && git commit --no-edit`, revalider (`npx tsc
    --noEmit`).
 5. Pousser sur la branche de travail **et** sur `main`
-   (`git push origin claude/wenn-cycle-tracking-app-km6x7a:main`).
+   (`git push origin claude/widget-loading-redirect-8ugj85:main`).
 
 ## Migrations Supabase — additif uniquement
 

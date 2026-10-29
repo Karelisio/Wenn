@@ -28,25 +28,42 @@ entre le compte de la titulaire du cycle et celui de son/sa partenaire.
 
 ## Fonctionnalités
 
-- Enregistrement des règles (intensité du flux : léger / moyen / abondant)
-- Suivi des douleurs (mêmes 3 niveaux que le flux), des symptômes (crampes,
+- Enregistrement des règles (intensité du flux : spotting / léger / moyen /
+  abondant)
+- Suivi des douleurs (3 niveaux léger/moyen/abondant), des symptômes (crampes,
   fatigue, maux de tête, ballonnements, seins sensibles, acné, dos douloureux,
-  nausées, sécrétions, rapport sexuel, autre douleur) et de l'humeur (emoji)
-- Notes libres par jour
-- Calendrier visuel mensuel : règles, prédiction, fenêtre fertile, ovulation, et
-  un résumé en emoji de ce qui a été renseigné chaque jour
-- Prédiction du prochain cycle et de la fenêtre d'ovulation à partir de l'historique
+  nausées, sécrétions, rapport sexuel, autre douleur) et de l'humeur (emoji) —
+  symptôme et humeur acceptent aussi un texte libre en plus des options
+  proposées (ex. une douleur ou une humeur spécifique)
+- Notes libres par jour, et « mots doux »/rappels laissés par le/la partenaire
+- Calendrier visuel mensuel : règles (couleur plus marquée selon la quantité de
+  sang), prédiction (projetée sur plusieurs cycles à venir), fenêtre fertile,
+  ovulation, et un résumé en emoji de ce qui a été renseigné chaque jour
+  (symptômes, humeur, entrées libres)
+- Prédiction du prochain cycle et de la fenêtre d'ovulation à partir de
+  l'historique (robuste aux spotting et aux cycles inhabituellement longs/courts)
 - Tendances : graphiques en courbes de la régularité du cycle, du flux, des
   douleurs, et un comparatif des deux
-- Notifications natives avant le début des règles prévues
-- Deux widgets d'écran d'accueil Android au choix (voir plus bas)
+- Notifications natives avant le début des règles prévues, qui se recalent
+  automatiquement si la date prévue change
+- Deux widgets d'écran d'accueil Android au choix (voir plus bas), qui se
+  rafraîchissent seuls même sans ouvrir l'app
 - Mode **Solo** (aucun compte, données 100 % locales) ou **Duo** (compte partagé,
-  synchronisé), au choix au premier lancement et modifiable depuis Réglages
-- Thème clair / sombre / système, en plus de la thématisation Material You
-- Sauvegarde : export/import JSON de l'historique, et mirroir local silencieux en
+  synchronisé en temps réel, utilisable hors connexion), au choix au premier
+  lancement et modifiable depuis Réglages
+- Réglage « Taille de l'affichage » (Petite à Très grande), propre à chaque
+  téléphone — utile quand la densité d'écran diffère entre les deux appareils
+- Thème clair / sombre / système, en plus de la thématisation Material You ;
+  barre d'état masquée dans l'app
+- Sauvegarde : export/import JSON de l'historique (mots doux compris, entrées
+  invalides ignorées sans effacer le reste), et mirroir local silencieux en
   mode duo (filet de sécurité en cas de perte d'accès au compte)
 - Vérification, téléchargement et installation des mises à jour directement
   depuis Réglages (pas de passage par le navigateur)
+- Accessibilité : calendrier entièrement annoncé par un lecteur d'écran, zoom
+  navigateur autorisé
+- Un rapport de la dernière fermeture brutale de l'app s'affiche dans Réglages
+  pour aider à diagnostiquer un bug
 
 > La V1 ne couvre volontairement pas les fonctionnalités liées à la fertilité au-delà
 > de l'estimation indicative de la fenêtre fertile affichée dans le calendrier.
@@ -61,10 +78,13 @@ Un « couple » relie deux comptes Supabase :
   peut ajouter des « mots doux »/rappels visibles par la titulaire (table
   `partner_notes`), sans jamais pouvoir modifier les données de cycle elles-mêmes.
 
-La liaison se fait via un **code d'invitation** à 8 caractères, généré automatiquement
-à la création de l'espace par la titulaire, et visible dans ses réglages. Réglages →
-Couple lié affiche l'état de la synchronisation et permet de quitter l'espace (pour
-changer de rôle) ou de renommer l'espace partagé.
+La liaison se fait via un **code d'invitation** à 8 caractères (insensible à la
+casse), généré automatiquement à la création de l'espace par la titulaire, et
+visible dans ses réglages. Réglages → Couple lié affiche l'état de la
+synchronisation et permet de quitter l'espace (pour changer de rôle) ou de
+renommer l'espace partagé. Quitter l'espace côté titulaire efface
+définitivement l'historique (après confirmation explicite) ; se déconnecter ou
+quitter l'espace efface aussi la copie locale sur le téléphone.
 
 ## Mise en route (développement local)
 
@@ -93,9 +113,12 @@ npm run dev
    des versions (chacun commence par un commentaire expliquant ce qu'il fait),
    dans le SQL Editor.
 3. Dans **Authentication > Providers**, l'authentification par e-mail (lien
-   magique / OTP) est activée par défaut. En usage réel, configure un SMTP
-   personnalisé (voir section suivante) : le SMTP par défaut de Supabase a une
-   limite de débit trop basse pour un usage à deux.
+   magique, en flux **PKCE**) est activée par défaut : le lien reçu par e-mail
+   ne fonctionne que sur l'appareil qui l'a demandé (et le plus récent, en cas
+   de demandes multiples), pour éviter qu'un lien intercepté connecte l'app à
+   un autre compte. En usage réel, configure un SMTP personnalisé (voir section
+   suivante) : le SMTP par défaut de Supabase a une limite de débit trop basse
+   pour un usage à deux.
 4. Dans **Authentication > URL Configuration**, ajoute l'URL de ton frontend
    (ex. `http://localhost:5173`, puis l'URL de production) à la liste des
    *Redirect URLs*.
@@ -145,7 +168,8 @@ npx cap open ios
 
 Les notifications locales (`@capacitor/local-notifications`) sont programmées via
 le système d'alarme natif (AlarmManager sur Android, `UNUserNotificationCenter`
-sur iOS) : elles se déclenchent même si l'application est fermée. La permission
+sur iOS) : elles se déclenchent même si l'application est fermée, et se
+recalent automatiquement si la date prévue des règles change. La permission
 est demandée automatiquement lors de l'activation des rappels dans **Réglages**.
 
 Les mises à jour (Réglages → Mises à jour) sont téléchargées via le pont réseau
@@ -153,6 +177,11 @@ natif de Capacitor (`CapacitorHttp`, pas `fetch()`) : les assets de release
 GitHub ne renvoient pas d'en-têtes CORS, ce qu'une requête `fetch()` classique
 dans la WebView refuserait silencieusement. L'APK est ensuite installé via
 l'installeur système (`ApkInstallerPlugin`).
+
+Autres particularités natives : la barre d'état (heure, batterie) est masquée
+dans l'app ; les polices sont embarquées dans le bundle (pas de dépendance à
+Google Fonts au lancement) ; et un rapport de la dernière fermeture brutale
+(`CrashLogPlugin`) s'affiche dans Réglages pour faciliter le diagnostic.
 
 ## Widgets d'écran d'accueil (Android)
 
@@ -166,7 +195,9 @@ Deux widgets sont disponibles au choix dans le sélecteur de widgets Android
   donnée), avec le nombre de jours restants affiché au centre.
 
 Les deux se mettent à jour automatiquement à chaque changement de données (Solo
-comme Duo), et périodiquement en secours (~3h) si l'app n'est pas rouverte.
+comme Duo), et recalculent eux-mêmes jours restants et progression à partir de
+la date du jour à chaque rafraîchissement périodique (~1h), même si l'app n'est
+pas rouverte pendant plusieurs jours.
 
 ## CI/CD — GitHub Actions
 
@@ -265,11 +296,19 @@ l'APK attaché.
 
 - Toutes les données de cycle sont protégées par **Row Level Security** côté
   Supabase : seuls les deux comptes d'un même couple peuvent lire leurs données,
-  et seule la titulaire peut les modifier.
+  et seule la titulaire peut les modifier. Les policies sont optimisées pour la
+  performance (`(select auth.uid())` évalué une fois par requête, une seule
+  policy permissive par rôle/action, index sur chaque clé étrangère).
+- Les fonctions de liaison d'espace (`join_couple`, `leave_couple`) sont
+  réservées aux utilisateurs authentifiés (jamais `anon`/`public`), et un
+  trigger empêche toute modification directe de `owner_id`/`partner_id`/
+  `invite_code` hors de ces fonctions ; un compte ne peut appartenir qu'à un
+  seul espace à la fois.
 - Aucune donnée n'est accessible à un tiers : pas d'API publique, pas de
   partage par défaut.
 - Le keystore de signature et les identifiants Supabase ne transitent jamais en
   clair dans le dépôt : ils sont fournis uniquement via les secrets GitHub
   Actions (CI) ou un fichier `.env` local ignoré par Git.
-- L'authentification se fait par lien magique (pas de mot de passe stocké côté
-  client).
+- L'authentification se fait par lien magique en flux **PKCE** (pas de mot de
+  passe stocké côté client) : le lien reçu par e-mail ne fonctionne que sur
+  l'appareil qui l'a demandé.
